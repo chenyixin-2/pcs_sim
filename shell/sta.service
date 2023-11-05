@@ -1,0 +1,14 @@
+[Unit]
+Description=STA Service
+[Service]
+User=root
+WorkingDirectory=/program/sta/shell/
+ExecStart=/bin/bash /program/sta/shell/run.sh
+Restart=always
+RestartSec=3
+StartLimitInterval=200
+StartLimitBurst=3
+Type=forking
+[Install]
+WantedBy=default.target
+Alias=sta.service

@@ -1,0 +1,1 @@
+cp /media/sf_vm_share/stad/stad /media/sf_vm_share/Output/MDL_1/sta/program/stad/bin

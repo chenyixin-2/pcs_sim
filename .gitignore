@@ -1,0 +1,4 @@
+log/**
+cfg/project.db
+.vscode/**
+**/**/timestamp*

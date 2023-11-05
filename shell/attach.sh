@@ -1,0 +1,1 @@
+gdb -cd=./ -directory=../ -ex "set pagination off" -ex "set disable-randomization on"  -ex "set detach-on-fork off" -ex "set follow-fork-mode child" -ex "b dtsd1352.c:192" -ex "b dtsd1352.c:239" -p $(pgrep -f "stad -t appl -d")g

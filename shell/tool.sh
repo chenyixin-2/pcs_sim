@@ -1,0 +1,1 @@
+../bin/stad -t tool
