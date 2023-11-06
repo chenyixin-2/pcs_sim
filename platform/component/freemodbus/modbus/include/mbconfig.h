@@ -28,8 +28,8 @@
  * File: $Id: mbconfig.h,v 1.15 2010/06/06 13:54:40 wolti Exp $
  */
 
-#ifndef _MB_CONFIG_H
-#define _MB_CONFIG_H
+#ifndef MBCONFIG_H
+#define MBCONFIG_H
 
 #ifdef __cplusplus
 PR_BEGIN_EXTERN_C
@@ -129,4 +129,4 @@ PR_BEGIN_EXTERN_C
 #ifdef __cplusplus
     PR_END_EXTERN_C
 #endif
-#endif
+#endif /* MBCONFIG_H */

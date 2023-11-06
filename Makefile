@@ -9,7 +9,7 @@
 # em-500
 #CC=arm-linux-gnueabihf-
 # FCU1104
-CC=arm-poky-linux-gnueabi-
+CC=arm-poky-linux-gnueabi-gcc
 INCPATH += -I platform \
 		   -I platform/abs \
 		   -I platform/util \
@@ -27,6 +27,7 @@ INCPATH += -I platform \
 		   -I platform/component/libmodbus/src \
 		   -I platform/component/sqlite \
 		   -I platform/component/cJSON \
+		   -I platform/component/uuid4/src \
 		   -I platform/component/paho.mqtt.c-1.3.9/src \
 		   -I platform/component/snowid \
 		   -I platform/device/chan \
@@ -127,7 +128,8 @@ SRCFILES = 	appl/main.c \
 			platform/component/paho.mqtt.c-1.3.9/src/WebSocket.c \
 			platform/component/snowid/snowid.c \
 			platform/component/snowid/snowid_util.c \
-			platform/component/snowid/snowid_checkpoint.c
+			platform/component/snowid/snowid_checkpoint.c \
+			platform/component/uuid4/src/uuid4.c
 			
 all:
 	$(CC)gcc --sysroot=/opt/fsl-imx-x11/4.1.15-2.1.0/sysroots/cortexa7hf-neon-poky-linux-gnueabi/ -mfloat-abi=hard $(SRCFILES) $(INCLUDES) -lpthread -lm -ldl -lrt -w -g -o ./bin/pcs_sim

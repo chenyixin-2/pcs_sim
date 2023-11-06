@@ -38,27 +38,37 @@ static void cloud_upload_sys()
 {
     struct cloud_t *c = &mdl.cloud;
     mqtt_ringbuffer_element_t e;
-    char buf[128];
+    char ts_buf[128];
     char itm_buf[2048];
     int i;
 
     /* 1 seconds */
-    if (c->sys_timer[0]++ >= c->sys_intv[0]){
+    if (c->sys_timer[0]++ >= c->sys_intv[0])
+    {
         c->sys_timer[0] = 0;
         e.cmd = CMD_MQTT_SENDKV;
         e.sztopic[0] = 0;
         e.szpayload[0] = 0;
 
-        /* sys state and err */
-        sprintf(itm_buf, "{\"uab\":%.1lf,\"type\":0, \"state\":\"%d\",\"err\":\"%s\",\"ap\":%d,\"aps\":%d,\"chgable\":%d,\"dhgable\":%d,\"soc\":%.1f}",
-                mdl.uab, sta_get_state(), sta_get_err_str(), sta_get_ap(), sta_get_aps(), sta_get_chgable(), sta_get_dhgable(), sta_get_soc());
-        misc_get_datetimestr(buf,sizeof(buf));
-        sprintf(e.szpayload, "{\"ts\":\"%s\",\"data\":[%s]}", buf, itm_buf);
+        cJSON *o = cJSON_CreateObject();
+        cJSON_AddNumberToObject(o, "uab", mdl.uab); // ap 内部为正，外部为负
+        cJSON_AddNumberToObject(o, "uca", mdl.uca);
+        cJSON_AddNumberToObject(o, "ubc", mdl.ubc);
+        cJSON_AddNumberToObject(o, "ia", mdl.ia);
+        cJSON_AddNumberToObject(o, "ib", mdl.ib);
+        cJSON_AddNumberToObject(o, "ic", mdl.ic);
+        char *ostr = cJSON_PrintUnformatted(o);
+
+        misc_get_datetimestr(ts_buf, sizeof(ts_buf));
+        sprintf(e.szpayload, "{\"ts\":\"%s\",\"data\":%s}", ts_buf, ostr);
         sprintf(e.sztopic, "%s", mdl.szdev);
-        // printf("topic:%s payload:%s\n", e.sztopic, e.szpayload);
+
         mqtt_lock_txbuf();
         mqtt_queue_txbuf(e);
         mqtt_unlock_txbuf();
+
+        cJSON_Delete(o);
+        cJSON_free(ostr);
     }
 }
 
@@ -108,9 +118,9 @@ static void cloud_proc_recv()
             }
             else
             {
-                if(cJSON_IsString(cmd))
+                if (cJSON_IsString(cmd))
                 {
-                    snprintf(strResp,sizeof(strResp),"%s get cmd:%s", __func__, cmd->valuestring);
+                    snprintf(strResp, sizeof(strResp), "%s get cmd:%s", __func__, cmd->valuestring);
                     if (strcmp(cmd->valuestring, "set uab") == 0)
                     {
                         param = cJSON_GetObjectItem(root, "param");
@@ -120,15 +130,15 @@ static void cloud_proc_recv()
                 else
                 {
                     cJSON *subCmd = cmd->child;
-                    if(NULL == subCmd)
+                    if (NULL == subCmd)
                     {
-                        snprintf(strResp,sizeof(strResp),"subcmd is  invalide");
+                        snprintf(strResp, sizeof(strResp), "subcmd is  invalide");
                         log_dbg("%s, subcmd cJSON_Parse null", __func__);
                         goto JSON_DONE;
                     }
 
-                    snprintf(strResp,sizeof(strResp),"ctn cmd %S received",subCmd->string);
-                    log_dbg("%s, get cmd:%s:%s", __func__, subCmd->string,cmd->valuestring);
+                    snprintf(strResp, sizeof(strResp), "ctn cmd %S received", subCmd->string);
+                    log_dbg("%s, get cmd:%s:%s", __func__, subCmd->string, cmd->valuestring);
                     if (strcmp(subCmd->string, "set_ctn_cmd") == 0)
                     {
                         if (strcmp(subCmd->valuestring, "stdby") == 0)
@@ -152,28 +162,28 @@ static void cloud_proc_recv()
                             sta_send_cmd(CMD_SM_IDLE);
                         }
                     }
-                    else if(strcmp(subCmd->string, "set_sta_aps") == 0)
+                    else if (strcmp(subCmd->string, "set_sta_aps") == 0)
                     {
                         sta_set_aps(atoi(subCmd->valuestring));
                     }
-                    else if(strcmp(subCmd->string, "ems_set_powreg_highlow") == 0)
+                    else if (strcmp(subCmd->string, "ems_set_powreg_highlow") == 0)
                     {
-                        int hight,low;
-                        sscanf(subCmd->valuestring,"%d:%d",&hight,&low);
+                        int hight, low;
+                        sscanf(subCmd->valuestring, "%d:%d", &hight, &low);
                     }
-                    else if(strcmp(subCmd->string, "ctn_set_aps") == 0)
+                    else if (strcmp(subCmd->string, "ctn_set_aps") == 0)
                     {
-                        int index,aps;
-                        sscanf(subCmd->valuestring,"%d:%d",&index,&aps);
+                        int index, aps;
+                        sscanf(subCmd->valuestring, "%d:%d", &index, &aps);
                     }
-                    else if(strcmp(subCmd->string, "chan_reset") == 0)
+                    else if (strcmp(subCmd->string, "chan_reset") == 0)
                     {
                         chan_reset(atoi(subCmd->valuestring));
                     }
-                    else if(strcmp(subCmd->string, "meter_send_cmd") == 0)
+                    else if (strcmp(subCmd->string, "meter_send_cmd") == 0)
                     {
-                        int index,value;
-                        sscanf(subCmd->valuestring,"%d:%d",&index,&value);
+                        int index, value;
+                        sscanf(subCmd->valuestring, "%d:%d", &index, &value);
                         if (strcmp(subCmd->valuestring, "stdby") == 0)
                         {
                         }
@@ -184,25 +194,24 @@ static void cloud_proc_recv()
                         {
                         }
                     }
-                    else if(strcmp(subCmd->string, "meter_set_pt") == 0)
+                    else if (strcmp(subCmd->string, "meter_set_pt") == 0)
                     {
                     }
-                    else if(strcmp(subCmd->string, "meter_set_ct") == 0)
+                    else if (strcmp(subCmd->string, "meter_set_ct") == 0)
                     {
                     }
-                     else if ( strcmp(subCmd->string, "set_pcurv_idx") == 0 )
-                     {
-                     }
+                    else if (strcmp(subCmd->string, "set_pcurv_idx") == 0)
+                    {
+                    }
                     else
                     {
-                        log_dbg("%s, unknown cmd : %s:%s", __func__,subCmd->string, subCmd->valuestring);
+                        log_dbg("%s, unknown cmd : %s:%s", __func__, subCmd->string, subCmd->valuestring);
                     }
-                    //返回应答
+                    // 返回应答
                     mqtt_ringbuffer_element_t eResponds;
                     eResponds.cmd = CMD_MQTT_SENDKV;
-                    sprintf(eResponds.szpayload,"{\"type\":\"response\",\"trace_id\":\"%s\"，\"timestamp\":%lld,\"data\":\"%s\"}"
-                                                        , sta_get_prjid(), cloud_get_timezonets(), strResp);
-                    sprintf(eResponds.sztopic,"%s", "control");
+                    sprintf(eResponds.szpayload, "{\"type\":\"response\",\"trace_id\":\"%s\"，\"timestamp\":%lld,\"data\":\"%s\"}", sta_get_prjid(), cloud_get_timezonets(), strResp);
+                    sprintf(eResponds.sztopic, "%s", "control");
                     mqtt_lock_txbuf();
                     mqtt_queue_txbuf(eResponds);
                     mqtt_unlock_txbuf();

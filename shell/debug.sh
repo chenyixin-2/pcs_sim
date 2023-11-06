@@ -1,1 +1,1 @@
-gdb -cd=./ -directory=../ -ex "set pagination 0" -ex "set detach-on-fork off" -ex "set follow-fork-mode child" -ex "set thread apply all bt" --args ../bin/stad -t appl -d 
+gdb -cd=./ -directory=../ -ex "set pagination 0" -ex "set detach-on-fork off" -ex "set thread apply all bt" --args ../bin/stad -t appl -d 

@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
-
+#include <uuid4.h>
 #include "plt.h"
 
 static mqtt_ringbuffer_t mqtt_txbuf;
@@ -96,23 +96,34 @@ static int mqtt_connect(void)
 {
     int ret = 0;
     int rc;
-    char buf[256];
+    char mqtt_server_url[256];
     struct mqtt_t *mqtt = &mdl.mqtt;
     int qos = 2;
 
+    UUID4_STATE_T state;
+    UUID4_T uuid;
+
+    uuid4_seed(&state);
+    uuid4_gen(&state, &uuid);
+
+    char buf_uuid[UUID4_STR_BUFFER_SIZE];
+    if (!uuid4_to_s(uuid, buf_uuid, sizeof(buf_uuid)))
+    {
+        ret = -1;
+    }
+    sprintf(mqtt->szclientid, "mdl-%d-%s", mdl.adr, buf_uuid);
     MQTTClient_connectOptions tmpconn_opts = MQTTClient_connectOptions_initializer;
     mqtt->conn_opts = tmpconn_opts;
-
-    strcpy(mqtt->szservip,mdl.szmqtt_servip);
+    strcpy(mqtt->szservip, mdl.szmqtt_servip);
     mqtt->servport = mdl.mqtt_servport;
     // sprintf(buf,"tcp://%s:%d",mqtt->szservip,mqtt->servport);
-    sprintf(buf, "%s:%d", mqtt->szservip, mqtt->servport);
-    MQTTClient_create(&mqtt->cli, buf, mqtt->szclientid, MQTTCLIENT_PERSISTENCE_NONE, NULL);
+    sprintf(mqtt_server_url, "%s:%d", mqtt->szservip, mqtt->servport);
+    MQTTClient_create(&mqtt->cli, mqtt_server_url, mqtt->szclientid, MQTTCLIENT_PERSISTENCE_NONE, NULL);
     mqtt->conn_opts.keepAliveInterval = 100;
     mqtt->conn_opts.cleansession = 1;
     // mqtt->conn_opts.username = mqtt->szaccesstoken;
-    //mqtt->conn_opts.username = mqtt->szusername;
-    //mqtt->conn_opts.password = mqtt->szpasswd;
+    // mqtt->conn_opts.username = mqtt->szusername;
+    // mqtt->conn_opts.password = mqtt->szpasswd;
 
     MQTTClient_setCallbacks(mqtt->cli, NULL, mqtt_connlost, NULL, NULL);
     if ((rc = MQTTClient_connect(mqtt->cli, &mqtt->conn_opts)) != MQTTCLIENT_SUCCESS)
@@ -120,8 +131,8 @@ static int mqtt_connect(void)
         ret = -1;
     }
 
-    sprintf(buf, "%s-ctl",mdl.szdev);
-    rc = MQTTClient_subscribe(mqtt->cli, buf, qos);
+    sprintf(mqtt_server_url, "%s-ctl", mdl.szdev);
+    rc = MQTTClient_subscribe(mqtt->cli, mqtt_server_url, qos);
     if (rc != MQTTCLIENT_SUCCESS && rc != qos)
     {
         ret = -2;
@@ -153,7 +164,8 @@ static void mqtt_offline()
 
     if (*step == 0)
     { // wait cmd
-        if (*cmd == CMD_SM_READY){ // ready cmd
+        if (*cmd == CMD_SM_READY)
+        { // ready cmd
             *cmd = CMD_SM_DONE;
             log_dbg("%s, state:%s, step:%d, get ready cmd, try to connect", __func__, szstate, *step);
             if (mqtt_connect() < 0)
@@ -275,7 +287,7 @@ static int mqtt_pub(char *sztopic, char *szpayload)
     //         "on topic %s for client with ClientID: %s\n",
     //         (int)(TIMEOUT/1000), PAYLOAD, TOPIC, CLIENTID);
     rc = MQTTClient_waitForCompletion(dev->cli, dev->token, 100000L);
-    if(dev->dbg)
+    if (dev->dbg)
     {
         log_dbg("%s, Message with delivery token %d delivered,topic:%s\n",
                 __func__, dev->token, dev->sztopic);
@@ -354,13 +366,15 @@ static void mqtt_ready()
         }
         else
         {
-        #if 1
+#if 1
             rc = MQTTClient_receive(dev->cli, &topicName, &topicLen, &message, 50);
-            if (message){
-                log_dbg("%s, Message arrived, topic:%s topic len:%d payload len:%d", __func__, topicName,topicLen, message->payloadlen);
+            if (message)
+            {
+                log_dbg("%s, Message arrived, topic:%s topic len:%d payload len:%d", __func__, topicName, topicLen, message->payloadlen);
                 pdst = e.szpayload;
                 psrc = message->payload;
-                for( i = 0; i < message->payloadlen; i++ ){
+                for (i = 0; i < message->payloadlen; i++)
+                {
                     *pdst++ = *psrc++;
                 }
                 *pdst = 0;
@@ -371,11 +385,12 @@ static void mqtt_ready()
                 mqtt_queue_rxbuf(e);
                 mqtt_unlock_rxbuf();
             }
-            if (rc != 0){
+            if (rc != 0)
+            {
                 dev->connlost = 1;
                 log_dbg("%s, MQTTClient_receive fail:%d, set connlost=1", __func__, rc);
             }
-        #endif
+#endif
             mqtt_lock_txbuf();
             rc = mqtt_peek_txbuf(&e, 0);
             mqtt_unlock_txbuf();
@@ -422,7 +437,8 @@ static void mqtt_sm(void)
     /* state machine timing statistics */
     double tseclipsed = 0.0;
     double ts = 0.0;
-    if (dev->sm.timing_timer < 0){ /* reset */
+    if (dev->sm.timing_timer < 0)
+    { /* reset */
         dev->sm.timing_timer = 0;
         ts = mqtt_get_timeofday();
         dev->sm.tslastrun = ts;
@@ -431,8 +447,11 @@ static void mqtt_sm(void)
         dev->sm.ave = -1.0;
         dev->sm.max = -1.0;
         dev->sm.cur = -1.0;
-    }else{
-        if (dev->sm.timing_timer++ >= 100){ /* cal every 100 times */
+    }
+    else
+    {
+        if (dev->sm.timing_timer++ >= 100)
+        { /* cal every 100 times */
             dev->sm.timing_timer = 0;
             ts = mqtt_get_timeofday();
             tseclipsed = ts - dev->sm.tslastrun;

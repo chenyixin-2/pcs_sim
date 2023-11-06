@@ -351,6 +351,9 @@ struct mdl_t
     double uab;
     double ubc;
     double uca;
+    double ua;
+    double ub;
+    double uc;    
     double ia;
     double ib;
     double ic;

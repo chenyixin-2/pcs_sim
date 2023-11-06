@@ -28,8 +28,8 @@
  * File: $Id: mbfunc.h,v 1.12 2006/12/07 22:10:34 wolti Exp $
  */
 
-#ifndef _MB_FUNC_H
-#define _MB_FUNC_H
+#ifndef MBFUNC_H
+#define MBFUNC_H
 
 #ifdef __cplusplus
 PR_BEGIN_EXTERN_C
@@ -77,4 +77,4 @@ eMBException    eMBFuncReadWriteMultipleHoldingRegister( UCHAR * pucFrame, USHOR
 #ifdef __cplusplus
 PR_END_EXTERN_C
 #endif
-#endif
+#endif /* MBFUNC_H */
