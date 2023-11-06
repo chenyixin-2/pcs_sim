@@ -80,7 +80,7 @@ static int tb_send_rpc_response(char *request_topic, char *response_payload)
     return 0;
 }
 
-static int tb_update_attributes(char *payload)
+static int tb_update_attributes(const char *payload)
 {
     tbmqtt_ringbuffer_element_t e;
 
@@ -115,10 +115,9 @@ static void tb_upload_param()
         e.szpayload[0] = 0;
 
         /* sw version */
-        sprintf(itm_buf, "'sw_ver':'%s', 'norm_cap':%d,'norm_pow':%d",
+        sprintf(itm_buf, "'sw_ver':'%d', 'norm_cap':%d,'norm_pow':%d",
                 plt_get_sw_ver(), sta_get_norm_cap(), sta_get_norm_pow());
-        sprintf(e.szpayload, "{'ts':%lld,'values':{%s}}", tb_get_ts(), itm_buf); /* thingsboard */
-        // sprintf(e.sztopic,"ems/data/rtEss/%s", sta_get_sn());
+        sprintf(e.szpayload, "{'ts':%lld,'values':{%s}}", tb_get_ts(), itm_buf);
         strcpy(e.sztopic, "v1/devices/me/telemetry");
 
         tbmqtt_lock_txbuf();
@@ -222,7 +221,7 @@ static void tb_upload_meter( void )
 
 int tb_init(void)
 {
-    log_dbg("%s, ++, ret:%d", __func__);
+    log_dbg("%s, ++,", __func__);
 
     struct tb_t *dev = &tb;
     int ret = 0;

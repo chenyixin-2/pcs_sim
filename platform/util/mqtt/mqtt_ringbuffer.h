@@ -1,5 +1,5 @@
-#ifndef __MQTT_RINGBUFFER_H__
-#define __MQTT_RINGBUFFER_H__
+#ifndef MQTT_RINGBUFFER_H
+#define MQTT_RINGBUFFER_H
 
 #include <pthread.h>
 
@@ -63,4 +63,6 @@ mqtt_ringbuffer_size_t mqtt_ringbuffer_dequeue_arr(mqtt_ringbuffer_t *buffer, mq
 mqtt_ringbuffer_size_t mqtt_ringbuffer_peek(mqtt_ringbuffer_t *buffer, mqtt_ringbuffer_element_t* data, mqtt_ringbuffer_size_t index);
 mqtt_ringbuffer_size_t mqtt_ringbuffer_num_items(mqtt_ringbuffer_t *buffer);
 mqtt_ringbuffer_size_t mqtt_ringbuffer_size(mqtt_ringbuffer_t *buffer);
-#endif
+mqtt_ringbuffer_size_t mqtt_ringbuffer_is_empty(mqtt_ringbuffer_t *buffer);
+mqtt_ringbuffer_size_t mqtt_ringbuffer_is_full(mqtt_ringbuffer_t *buffer);
+#endif /* MQTT_RINGBUFFER_H */

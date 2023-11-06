@@ -14,9 +14,12 @@ static int appl_init()
 {
     int ret = 0;
 
-    if ( 0 ) { // sta_init() != 0
+    if (0)
+    { // sta_init() != 0
         ret = -1;
-    }else if (cloud_init() != 0){ /* cloud_init() != 0 */
+    }
+    else if (cloud_init() != 0)
+    { /* cloud_init() != 0 */
         ret = -1;
     }
 
@@ -26,7 +29,8 @@ static int appl_init()
 
 static int appl_run()
 {
-    while (1){
+    while (1)
+    {
         usleep(90000);
         cloud_exe();
     }
@@ -39,24 +43,33 @@ int appl_main(void)
 
     syslog(LOG_INFO, "%s, ++", __func__);
 
-    if (DAEMON == 1){
-        if (misc_daemon(true, false) != 0){
+    if (DAEMON == 1)
+    {
+        if (misc_daemon(true, false) != 0)
+        {
             log_dbg("%s, become daemon fail", __func__);
             ret = -1;
             goto leave;
         }
     }
 
-    if (plt_init_stp1() != 0){
+    if (plt_init_stp1() != 0)
+    {
         log_dbg("%s, plt_init_stp1 fail", __func__);
         ret = -1;
-    }else if (appl_init() != 0){
+    }
+    else if (appl_init() != 0)
+    {
         log_dbg("%s, appl_init fail", __func__);
         ret = -1;
-    }else if (plt_init_stp2() != 0){
+    }
+    else if (plt_init_stp2() != 0)
+    {
         log_dbg("%s, appl_init_stp2 fail", __func__);
         ret = -1;
-    }else{
+    }
+    else
+    {
         appl_run();
     }
 

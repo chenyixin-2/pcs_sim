@@ -58,5 +58,7 @@ chan_ring_buffer_size_t chan_ring_buffer_dequeue(chan_ring_buffer_t *buffer, cha
 chan_ring_buffer_size_t chan_ring_buffer_dequeue_arr(chan_ring_buffer_t *buffer, chan_ring_buffer_element_t* data, chan_ring_buffer_size_t len);
 chan_ring_buffer_size_t chan_ring_buffer_peek(chan_ring_buffer_t *buffer, chan_ring_buffer_element_t* data, chan_ring_buffer_size_t index);
 chan_ring_buffer_size_t chan_ring_buffer_num_items(chan_ring_buffer_t *buffer);
+chan_ring_buffer_size_t chan_ring_buffer_is_empty(chan_ring_buffer_t *buffer);
+chan_ring_buffer_size_t chan_ring_buffer_is_full(chan_ring_buffer_t *buffer);
 
 #endif

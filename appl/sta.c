@@ -127,7 +127,7 @@ void sta_set_state(int state, int errcode)
     struct mdl_t *dev = &mdl;
     mdl.sm.step = 0;
     mdl.sm.state = state;
-    mdl.sm.errcode = errcode;
+    mdl.sm.err = errcode;
 
     switch (state)
     {
@@ -887,12 +887,12 @@ void sta_sm(void)
     { /* rest */
         dev->sm.timing_timer = 0;
         ts = misc_gettimeofday();
-        dev->sm.tslastrun = ts;
-        dev->sm.totalcnt = 0;
-        dev->sm.totaltime = 0;
-        dev->sm.ave = -1.0;
-        dev->sm.max = -1.0;
-        dev->sm.cur = -1.0;
+        dev->sm.timing_tslastrun = ts;
+        dev->sm.timing_totalcnt = 0;
+        dev->sm.timing_totaltime = 0;
+        dev->sm.timing_ave = -1.0;
+        dev->sm.timing_max = -1.0;
+        dev->sm.timing_cur = -1.0;
     }
     else
     {
@@ -900,17 +900,17 @@ void sta_sm(void)
         { /* cal every 100 times */
             dev->sm.timing_timer = 0;
             ts = misc_gettimeofday();
-            tseclipsed = ts - dev->sm.tslastrun;
-            dev->sm.totalcnt += 1;
-            dev->sm.totaltime += tseclipsed;
-            dev->sm.tslastrun = ts;
-            dev->sm.ave = dev->sm.totaltime / dev->sm.totalcnt / 100;
-            dev->sm.cur = tseclipsed / 100;
-            if (dev->sm.cur > dev->sm.max)
+            tseclipsed = ts - dev->sm.timing_tslastrun;
+            dev->sm.timing_totalcnt  += 1;
+            dev->sm.timing_totaltime += tseclipsed;
+            dev->sm.timing_tslastrun = ts;
+            dev->sm.timing_ave = dev->sm.timing_totaltime / dev->sm.timing_totalcnt / 100;
+            dev->sm.timing_cur = tseclipsed / 100;
+            if (dev->sm.timing_cur > dev->sm.timing_max)
             {
-                dev->sm.max = dev->sm.cur;
+                dev->sm.timing_max = dev->sm.timing_cur;
             }
-            if (dev->sm.totalcnt > 100000)
+            if (dev->sm.timing_totalcnt > 100000)
             { /* auto reset */
                 dev->sm.timing_timer = -1;
             }
@@ -957,7 +957,7 @@ void sta_sm(void)
     }
 }
 
-static void sta_thrd(void *param)
+static void *sta_thrd(void *param)
 {
     log_dbg("%s, ++", __func__);
 

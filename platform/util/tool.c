@@ -13,8 +13,8 @@
 #define shm_lock() pthread_mutex_lock(&SHM->mutex)
 #define shm_unlock() pthread_mutex_unlock(&SHM->mutex)
 
-static char *pstr_sem_name_ping = "sta_sem_ping";
-static char *pstr_sem_name_pong = "sta_sem_pong";
+static const char *pstr_sem_name_ping = "sta_sem_ping";
+static const char *pstr_sem_name_pong = "sta_sem_pong";
 
 static int bmain_run = 1;
 static int bmenu_sta_run = 1;
@@ -29,7 +29,7 @@ static int bmenu_ems_run = 1;
 typedef struct
 {
     int bHide;
-    char *szInfo;
+    const char *szInfo;
     void (*func)(void);
 } menu_t;
 
@@ -120,9 +120,9 @@ static void print_chan()
     for (i = 1; i <= *channbr; i++)
     {
         chan = &(sta->chan[i]);
-        printf("  [%d]info:%s mode:%s dev:%s port:%d servip:%s servport:%d baud:%d dbg:%d en:%d mbidx:%d rstcnt:%.0f\n",
+        printf("  [%d]info:%s mode:%s dev:%s port:%d servip:%s servport:%d baud:%d dbg:%d en:%d rstcnt:%.0f\n",
                i, chan->szinfo, chan->szmode, chan->szdev, chan->port, chan->servip, chan->servport,
-               chan->baud, chan->dbg, chan->en, chan->mbsidx, chan->rstcnt);
+               chan->baud, chan->dbg, chan->en, chan->rstcnt);
     }
 }
 
@@ -133,7 +133,7 @@ static void print_mqtt()
     printf("  stat:" YELLOW "%s" NONE " err:%s stp:%d servip:%s servport:%d clientid:%s username:%s passwd:%s\n",
            dev->sm.szstate, dev->sm.szerrcode, dev->sm.step, dev->szservip, dev->servport, dev->szclientid, dev->szusername, dev->szpasswd);
     printf("txbufusage:%.1f rxbufusage:%.1f sm tick:%03d ave:%.0f max:%.0fms pub_tot:%.0f ave:%.0f max:%.0f\n",
-           dev->txbuf_usage, dev->rxbuf_usage, dev->sm.tick, dev->sm.ave, dev->sm.max,
+           dev->txbuf_usage, dev->rxbuf_usage, dev->sm.tick, dev->sm.timing_ave, dev->sm.timing_max,
            dev->pub_totalcnt, dev->pub_ave, dev->pub_max);
 }
 
@@ -144,8 +144,8 @@ static void print_tbmqtt()
     printf("  stat:" YELLOW "%s" NONE " err:%s stp:%d servip:%s servport:%d clientid:%s accesstoken:%s \n",
            dev->sm.szstate, dev->sm.szerrcode, dev->sm.step, dev->szservip, dev->servport, dev->szclientid, dev->szaccesstoken);
     printf("txbufusage:%.1f rxbufusage:%.1f sm tick:%03d ave:%.0f max:%.0fms pub_total:%.0f ave:%.0f max:%.0f\n",
-           dev->txbuf_usage, dev->rxbuf_usage, dev->sm.tick, dev->sm.ave, dev->sm.max,
-           dev->pub_totalcnt, dev->pub_ave, dev->pub_max);
+           dev->txbuf_usage, dev->rxbuf_usage, dev->sm.tick, dev->sm.timing_ave, dev->sm.timing_max,
+           dev->pubTotalCnt, dev->pubAvg, dev->pubMax);
 }
 
 static void print_chan_bytab()
@@ -782,7 +782,7 @@ static void mfunc_misc_printmac(void)
     gettimeofday(&tv, &tz);
     endtime = (double)tv.tv_sec * 1000 + (double)tv.tv_usec / 1000;
     exetime = endtime - starttime;
-    printf("mac_get_cpu_info exe time:%.3fms val:%.1f\%\n", exetime / 100.0, mac_get_cpu_occupy());
+    printf("mac_get_cpu_info exe time:%.3fms val:%.1f\n", exetime / 100.0, mac_get_cpu_occupy());
 
     /* get mem occupy */
     gettimeofday(&tv, &tz);
@@ -794,7 +794,7 @@ static void mfunc_misc_printmac(void)
     gettimeofday(&tv, &tz);
     endtime = (double)tv.tv_sec * 1000 + (double)tv.tv_usec / 1000;
     exetime = endtime - starttime;
-    printf("mac_get_mem_occupy exe time:%.3fms val:%.1f\%\n", exetime / 100.0, mac_get_mem_occupy());
+    printf("mac_get_mem_occupy exe time:%.3fms val:%.1f\n", exetime / 100.0, mac_get_mem_occupy());
 
     /* get disk occupy */
     gettimeofday(&tv, &tz);
@@ -806,7 +806,7 @@ static void mfunc_misc_printmac(void)
     gettimeofday(&tv, &tz);
     endtime = (double)tv.tv_sec * 1000 + (double)tv.tv_usec / 1000;
     exetime = endtime - starttime;
-    printf("mac_get_disk_occupy exe time:%.3fms val:%.1f\%\n", exetime / 100.0, mac_get_disk_occupy());
+    printf("mac_get_disk_occupy exe time:%.3fms val:%.1f\n", exetime / 100.0, mac_get_disk_occupy());
 }
 
 static void mfunc_misc_cjson_ex()
@@ -883,89 +883,89 @@ static void mfunc_misc_mem_leak_ex()
 
 static void mfunc_misc_ringbuffer_ex()
 {
-    test_ring_buffer_element_t e;
-    int i, rc;
+    // test_ring_buffer_element_t e;
+    // int i, rc;
 
-    test_ring_buffer_init(ptestrb);
-    printf("test ring buffer inited, queue used:%d, q_size:%d\n",
-           test_ring_buffer_num_items(ptestrb),
-           test_ring_buffer_size(ptestrb));
+    // test_ring_buffer_init(ptestrb);
+    // printf("test ring buffer inited, queue used:%d, q_size:%d\n",
+    //        test_ring_buffer_num_items(ptestrb),
+    //        test_ring_buffer_size(ptestrb));
 
-    printf("peek from 0 to 2\n");
-    for (i = 0; i < 3; i++)
-    {
-        rc = test_ring_buffer_peek(ptestrb, &e, i);
-        printf(" index:%d rc:%d", i, rc);
-        if (rc == 1)
-        {
-            printf(" val:%d\n", e.val);
-        }
-        else
-        {
-            printf("\n");
-        }
-    }
+    // printf("peek from 0 to 2\n");
+    // for (i = 0; i < 3; i++)
+    // {
+    //     rc = test_ring_buffer_peek(ptestrb, &e, i);
+    //     printf(" index:%d rc:%d", i, rc);
+    //     if (rc == 1)
+    //     {
+    //         printf(" val:%d\n", e.val);
+    //     }
+    //     else
+    //     {
+    //         printf("\n");
+    //     }
+    // }
 
-    printf("queue 3 values\n");
-    for (i = 0; i < 3; i++)
-    {
-        e.val = 11 + i;
-        test_ring_buffer_queue(ptestrb, e);
-        printf(" val:%d\n", e.val);
-    }
-    printf("\n");
+    // printf("queue 3 values\n");
+    // for (i = 0; i < 3; i++)
+    // {
+    //     e.val = 11 + i;
+    //     test_ring_buffer_queue(ptestrb, e);
+    //     printf(" val:%d\n", e.val);
+    // }
+    // printf("\n");
 
-    printf("peek from 0 to 2\n");
-    for (i = 0; i < 3; i++)
-    {
-        rc = test_ring_buffer_peek(ptestrb, &e, i);
-        printf(" index:%d rc:%d", i, rc);
-        if (rc == 1)
-        {
-            printf(" val:%d\n", e.val);
-        }
-        else
-        {
-            printf("\n");
-        }
-    }
+    // printf("peek from 0 to 2\n");
+    // for (i = 0; i < 3; i++)
+    // {
+    //     rc = test_ring_buffer_peek(ptestrb, &e, i);
+    //     printf(" index:%d rc:%d", i, rc);
+    //     if (rc == 1)
+    //     {
+    //         printf(" val:%d\n", e.val);
+    //     }
+    //     else
+    //     {
+    //         printf("\n");
+    //     }
+    // }
 
-    test_ring_buffer_dequeue(ptestrb, &e);
-    printf("dequeue 1 value : %d\n", e.val);
+    // test_ring_buffer_dequeue(ptestrb, &e);
+    // printf("dequeue 1 value : %d\n", e.val);
 
-    printf("peek from 0 to 2\n");
-    for (i = 0; i < 3; i++)
-    {
-        rc = test_ring_buffer_peek(ptestrb, &e, i);
-        printf(" index:%d rc:%d", i, rc);
-        if (rc == 1)
-        {
-            printf(" val:%d\n", e.val);
-        }
-        else
-        {
-            printf("\n");
-        }
-    }
+    // printf("peek from 0 to 2\n");
+    // for (i = 0; i < 3; i++)
+    // {
+    //     rc = test_ring_buffer_peek(ptestrb, &e, i);
+    //     printf(" index:%d rc:%d", i, rc);
+    //     if (rc == 1)
+    //     {
+    //         printf(" val:%d\n", e.val);
+    //     }
+    //     else
+    //     {
+    //         printf("\n");
+    //     }
+    // }
 
-    e.val = 14;
-    test_ring_buffer_queue(ptestrb, e);
-    printf("queue 1 val:%d\n", e.val);
+    // e.val = 14;
+    // test_ring_buffer_queue(ptestrb, e);
+    // printf("queue 1 val:%d\n", e.val);
 
-    printf("peek from 0 to 2\n");
-    for (i = 0; i < 3; i++)
-    {
-        rc = test_ring_buffer_peek(ptestrb, &e, i);
-        printf(" index:%d rc:%d", i, rc);
-        if (rc == 1)
-        {
-            printf(" val:%d\n", e.val);
-        }
-        else
-        {
-            printf("\n");
-        }
-    }
+    // printf("peek from 0 to 2\n");
+    // for (i = 0; i < 3; i++)
+    // {
+    //     rc = test_ring_buffer_peek(ptestrb, &e, i);
+    //     printf(" index:%d rc:%d", i, rc);
+    //     if (rc == 1)
+    //     {
+    //         printf(" val:%d\n", e.val);
+    //     }
+    //     else
+    //     {
+    //         printf("\n");
+    //     }
+    // }
 }
 
 static void mfunc_misc_snap_del_test()
@@ -1433,7 +1433,7 @@ static void mfunc_ems_reset_pcurv(void)
 }
 
 static void mfunc_ems_print_pcurv(void)
-{    
+{
 }
 
 static void mfunc_ems_edit_pcurv(void)

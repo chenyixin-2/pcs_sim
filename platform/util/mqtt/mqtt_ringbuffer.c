@@ -110,6 +110,7 @@ mqtt_ringbuffer_size_t mqtt_ringbuffer_size(mqtt_ringbuffer_t *buffer)
     return MQTT_RING_BUFFER_SIZE;
 }
 
+
 /** * Returns whether a ring buffer is empty.
     * @param buffer The buffer for which it should be returned whether it is empty.
     * @return 1 if empty; 0 otherwise.

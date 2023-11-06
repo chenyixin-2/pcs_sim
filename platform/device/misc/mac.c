@@ -1,6 +1,5 @@
-#include <stdio.h>
-#include <sys/sysinfo.h>
 #include "plt.h"
+#include <unistd.h>
 
 static struct cpu_info_t cpu_info[2];
 
@@ -13,7 +12,7 @@ void mac_get_cpu_info(struct cpu_info_t* cpu_info)
 	fd = fopen("/proc/stat", "r");
 	fgets(buff, sizeof(buff), fd);
  
-	sscanf(buff, "%s %lu %lu %lu %lu", cpu_info->name, &cpu_info->user, &cpu_info->nic, 
+	sscanf(buff, "%s %u %u %u %u", cpu_info->name, &cpu_info->user, &cpu_info->nic, 
 				&cpu_info->system, &cpu_info->idle);
 	fclose(fd);
 }

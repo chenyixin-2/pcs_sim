@@ -205,7 +205,7 @@ eMBErrorCode eMBRegDiscreteCB(fmodbus_t *ctx, UCHAR *pucRegBuffer, USHORT usAddr
     return MB_ENOREG;
 }
 
-int mbs_start_Enjoy100kW(int port)
+int mbs_start_Enjoy100kW()
 {
     int ret = 0;
     const UCHAR ucSlaveID[] = {0xAA, 0xBB, 0xCC};

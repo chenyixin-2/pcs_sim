@@ -97,132 +97,130 @@ static void cloud_proc_recv()
     int aps = 0;
     int rc;
     char strResp[128];
-    mqtt_ringbuffer_element_t e;
 
+    mqtt_ringbuffer_element_t e;
     mqtt_lock_rxbuf();
     rc = mqtt_dequeue_rxbuf(&e);
     mqtt_unlock_rxbuf();
-    if (rc == 1)
+    if (rc != 1)
+        return;
+
+    root = cJSON_Parse(e.szpayload);
+    if (!root)
     {
-        root = cJSON_Parse(e.szpayload);
-        if (!root)
+        log_dbg("%s, cJSON failed to parse payload null", __func__);
+        return;
+    }
+
+    cmd = cJSON_GetObjectItem(root, "cmd");
+    if (!cmd)
+    {
+        log_dbg("%s, cJSON failed to get cmd ", __func__);
+        return;
+    }
+
+    // { "cmd":"set uab", "param":220.0 }    
+    if (cJSON_IsString(cmd))
+    {
+        snprintf(strResp, sizeof(strResp), "%s get cmd:%s", __func__, cmd->valuestring);
+        if (strcmp(cmd->valuestring, "set uab") == 0)
         {
-            log_dbg("%s, cJSON_Parse null", __func__);
+            param = cJSON_GetObjectItem(root, "param");
+            mdl.uab = param->valuedouble;
+        }
+    }
+    else
+    {
+        cJSON *subCmd = cmd->child;
+        if (NULL == subCmd)
+        {
+            snprintf(strResp, sizeof(strResp), "subcmd is invalid");
+            log_dbg("%s, subcmd cJSON_Parse null", __func__);
+            goto JSON_DONE;
+        }
+
+        snprintf(strResp, sizeof(strResp), "ctn cmd %s received", subCmd->string);
+        log_dbg("%s, get cmd:%s:%s", __func__, subCmd->string, cmd->valuestring);
+        if (strcmp(subCmd->string, "set_ctn_cmd") == 0)
+        {
+            if (strcmp(subCmd->valuestring, "stdby") == 0)
+            {
+                sta_send_cmd(CMD_SM_STDBY);
+            }
+            else if (strcmp(subCmd->valuestring, "stop") == 0)
+            {
+                sta_send_cmd(CMD_SM_STOP);
+            }
+            else if (strcmp(subCmd->valuestring, "ready") == 0)
+            {
+                sta_send_cmd(CMD_SM_READY);
+            }
+            else if (strcmp(subCmd->valuestring, "offgrid") == 0)
+            {
+                sta_send_cmd(CMD_SM_OFFGRID);
+            }
+            else if (strcmp(subCmd->valuestring, "idle") == 0)
+            {
+                sta_send_cmd(CMD_SM_IDLE);
+            }
+        }
+        else if (strcmp(subCmd->string, "set_sta_aps") == 0)
+        {
+            sta_set_aps(atoi(subCmd->valuestring));
+        }
+        else if (strcmp(subCmd->string, "ems_set_powreg_highlow") == 0)
+        {
+            int hight, low;
+            sscanf(subCmd->valuestring, "%d:%d", &hight, &low);
+        }
+        else if (strcmp(subCmd->string, "ctn_set_aps") == 0)
+        {
+            int index, aps;
+            sscanf(subCmd->valuestring, "%d:%d", &index, &aps);
+        }
+        else if (strcmp(subCmd->string, "chan_reset") == 0)
+        {
+            chan_reset(atoi(subCmd->valuestring));
+        }
+        else if (strcmp(subCmd->string, "meter_send_cmd") == 0)
+        {
+            int index, value;
+            sscanf(subCmd->valuestring, "%d:%d", &index, &value);
+            if (strcmp(subCmd->valuestring, "stdby") == 0)
+            {
+            }
+            else if (strcmp(subCmd->valuestring, "stop") == 0)
+            {
+            }
+            else if (strcmp(subCmd->valuestring, "ready") == 0)
+            {
+            }
+        }
+        else if (strcmp(subCmd->string, "meter_set_pt") == 0)
+        {
+        }
+        else if (strcmp(subCmd->string, "meter_set_ct") == 0)
+        {
+        }
+        else if (strcmp(subCmd->string, "set_pcurv_idx") == 0)
+        {
         }
         else
         {
-            cmd = cJSON_GetObjectItem(root, "cmd");
-            if (!cmd)
-            {
-                log_dbg("%s, cJSON_GetObjectItem cmd fail", __func__);
-            }
-            else
-            {
-                if (cJSON_IsString(cmd))
-                {
-                    snprintf(strResp, sizeof(strResp), "%s get cmd:%s", __func__, cmd->valuestring);
-                    if (strcmp(cmd->valuestring, "set uab") == 0)
-                    {
-                        param = cJSON_GetObjectItem(root, "param");
-                        mdl.uab = param->valuedouble;
-                    }
-                }
-                else
-                {
-                    cJSON *subCmd = cmd->child;
-                    if (NULL == subCmd)
-                    {
-                        snprintf(strResp, sizeof(strResp), "subcmd is  invalide");
-                        log_dbg("%s, subcmd cJSON_Parse null", __func__);
-                        goto JSON_DONE;
-                    }
-
-                    snprintf(strResp, sizeof(strResp), "ctn cmd %S received", subCmd->string);
-                    log_dbg("%s, get cmd:%s:%s", __func__, subCmd->string, cmd->valuestring);
-                    if (strcmp(subCmd->string, "set_ctn_cmd") == 0)
-                    {
-                        if (strcmp(subCmd->valuestring, "stdby") == 0)
-                        {
-                            sta_send_cmd(CMD_SM_STDBY);
-                        }
-                        else if (strcmp(subCmd->valuestring, "stop") == 0)
-                        {
-                            sta_send_cmd(CMD_SM_STOP);
-                        }
-                        else if (strcmp(subCmd->valuestring, "ready") == 0)
-                        {
-                            sta_send_cmd(CMD_SM_READY);
-                        }
-                        else if (strcmp(subCmd->valuestring, "offgrid") == 0)
-                        {
-                            sta_send_cmd(CMD_SM_OFFGRID);
-                        }
-                        else if (strcmp(subCmd->valuestring, "idle") == 0)
-                        {
-                            sta_send_cmd(CMD_SM_IDLE);
-                        }
-                    }
-                    else if (strcmp(subCmd->string, "set_sta_aps") == 0)
-                    {
-                        sta_set_aps(atoi(subCmd->valuestring));
-                    }
-                    else if (strcmp(subCmd->string, "ems_set_powreg_highlow") == 0)
-                    {
-                        int hight, low;
-                        sscanf(subCmd->valuestring, "%d:%d", &hight, &low);
-                    }
-                    else if (strcmp(subCmd->string, "ctn_set_aps") == 0)
-                    {
-                        int index, aps;
-                        sscanf(subCmd->valuestring, "%d:%d", &index, &aps);
-                    }
-                    else if (strcmp(subCmd->string, "chan_reset") == 0)
-                    {
-                        chan_reset(atoi(subCmd->valuestring));
-                    }
-                    else if (strcmp(subCmd->string, "meter_send_cmd") == 0)
-                    {
-                        int index, value;
-                        sscanf(subCmd->valuestring, "%d:%d", &index, &value);
-                        if (strcmp(subCmd->valuestring, "stdby") == 0)
-                        {
-                        }
-                        else if (strcmp(subCmd->valuestring, "stop") == 0)
-                        {
-                        }
-                        else if (strcmp(subCmd->valuestring, "ready") == 0)
-                        {
-                        }
-                    }
-                    else if (strcmp(subCmd->string, "meter_set_pt") == 0)
-                    {
-                    }
-                    else if (strcmp(subCmd->string, "meter_set_ct") == 0)
-                    {
-                    }
-                    else if (strcmp(subCmd->string, "set_pcurv_idx") == 0)
-                    {
-                    }
-                    else
-                    {
-                        log_dbg("%s, unknown cmd : %s:%s", __func__, subCmd->string, subCmd->valuestring);
-                    }
-                    // 返回应答
-                    mqtt_ringbuffer_element_t eResponds;
-                    eResponds.cmd = CMD_MQTT_SENDKV;
-                    sprintf(eResponds.szpayload, "{\"type\":\"response\",\"trace_id\":\"%s\"，\"timestamp\":%lld,\"data\":\"%s\"}", sta_get_prjid(), cloud_get_timezonets(), strResp);
-                    sprintf(eResponds.sztopic, "%s", "control");
-                    mqtt_lock_txbuf();
-                    mqtt_queue_txbuf(eResponds);
-                    mqtt_unlock_txbuf();
-                }
-                return;
-            }
-
-        JSON_DONE:
-            cJSON_Delete(root);
+            log_dbg("%s, unknown cmd : %s:%s", __func__, subCmd->string, subCmd->valuestring);
         }
+        // 返回应答
+        mqtt_ringbuffer_element_t eResponds;
+        eResponds.cmd = CMD_MQTT_SENDKV;
+        sprintf(eResponds.szpayload, "{\"type\":\"response\",\"trace_id\":\"%s\"，\"timestamp\":%lld,\"data\":\"%s\"}", sta_get_prjid(), cloud_get_timezonets(), strResp);
+        sprintf(eResponds.sztopic, "%s", "control");
+        mqtt_lock_txbuf();
+        mqtt_queue_txbuf(eResponds);
+        mqtt_unlock_txbuf();
     }
+
+JSON_DONE:
+    cJSON_Delete(root);
 }
 
 void cloud_exe(void)

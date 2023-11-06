@@ -3,5 +3,5 @@
 
 int mbs_start_ctn(int port);
 int mbs_start_EMA(int port);
-int mbs_start_Enjoy100kW(int port);
+int mbs_start_Enjoy100kW();
 #endif

@@ -5,9 +5,6 @@
 #include "tbmqtt_cache.h"
 #include "log.h"
 
-#define BUF_PAYLOAD_MAX_LEN     (8000)
-#define BUF_TOPIC_MAX_LEN       (128)
-
 static int callback_read_one_item(void* para, int ncolumn, char** columnvalue, char* columnname[]);
 static int callback_count(void* para, int ncolumn, char** columnvalue, char* columnname[]);
 static int callback_pageSize(void* para, int ncolumn, char** columnvalue, char* columnname[]);
@@ -18,7 +15,7 @@ struct tbmqtt_cache_sqlite_data {
     void* data;
 };
 
-int tbmqtt_cache_open(char* dir,char* table_name, void** handle)
+int tbmqtt_cache_open(const char* dir,const char* table_name, void** handle)
 {
     printf("%s,dir:%s,table:%s\n",__func__,dir,table_name);
     int nResult = sqlite3_open(dir, (sqlite3**) handle);
@@ -43,7 +40,7 @@ int tbmqtt_cache_open(char* dir,char* table_name, void** handle)
     return 0; 
 }
 
-int tbmqtt_cache_read_one_payload(void* handle,char* table_name , tbmqtt_ringbuffer_element_t *e,int *idx)
+int tbmqtt_cache_read_one_payload(void* handle,const char* table_name , tbmqtt_ringbuffer_element_t *e,int *idx)
 {
     char sql_select[128];
     struct tbmqtt_cache_sqlite_data stTemp;
@@ -63,7 +60,7 @@ int tbmqtt_cache_read_one_payload(void* handle,char* table_name , tbmqtt_ringbuf
     return 0;
 }
 
-int tbmqtt_cache_write_one_payload(void* handle, char* table_name , tbmqtt_ringbuffer_element_t e)
+int tbmqtt_cache_write_one_payload(void* handle, const char* table_name , tbmqtt_ringbuffer_element_t e)
 {
     char sql_insert[BUF_PAYLOAD_MAX_LEN + BUF_TOPIC_MAX_LEN + 128];
     memset(sql_insert, 0, BUF_PAYLOAD_MAX_LEN + BUF_TOPIC_MAX_LEN + 128);
@@ -78,7 +75,7 @@ int tbmqtt_cache_write_one_payload(void* handle, char* table_name , tbmqtt_ringb
 
 }
 
-int tbmqtt_cache_delete_one_payload(void* handle, char* table_name ,int rowid)
+int tbmqtt_cache_delete_one_payload(void* handle, const char* table_name ,int rowid)
 {
     char sql_delete[128];
 
@@ -94,7 +91,7 @@ int tbmqtt_cache_delete_one_payload(void* handle, char* table_name ,int rowid)
     return 0;
 }
 
-int tbmqtt_cache_get_payload_nb(void* handle, char* table_name, int* nb)
+int tbmqtt_cache_get_payload_nb(void* handle, const char* table_name, int* nb)
 {
     char sql_select[128];
 

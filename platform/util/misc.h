@@ -1,5 +1,5 @@
-#ifndef __MISC_H__
-#define __MISC_H__
+#ifndef MISC_H
+#define MISC_H
 
 #define EPS (0.000001)
 #define ISZERO(x) (((x<EPS)&&(x>-EPS))?1:0)
@@ -64,63 +64,6 @@ struct power_t{
     int bchgable;
 };
 
-struct statemachine_t{
-    int state;
-    char szstate[16];
-    int step;
-    int count;
-    int errcode;
-    char szerrcode[64];
-    unsigned char tick;
-    int tick_timer;
-
-    /* timing statistics */
-    int timing_timer;
-    double tslastrun;
-    double totalcnt;
-    double totaltime;
-    double ave;
-    double max;
-    double cur;
-};
-
-struct comm_t{
-    int online;
-    int pollstp;
-    unsigned char tick;
-    int pollfailcnt;
-    int pollrstcnt;
-    int pollupdated;
-    int pollupdated_to;
-    double polltotalfailcnt;
-    //double polltotalrstcnt;
-    double rstcnt;
-    double polltotalcnt;
-    double polltotaltime;
-    double pollave;
-    double pollmax;
-    double pollcur;
-    double pollstarttime;
-    double pollendtime;
-
-    int poll_param_en;
-
-    int q_used;
-    int q_size;
-
-    /* timing statistics */
-    /* in ctnmdl, this is used to cal modbus tcp write */
-    int timing_timer;
-    double tslastrun;
-    double totalcnt;
-    double totaltime;
-    double ave;
-    double max;
-};
-
-#define EPS (0.0001)
-#define ISZERO(x) (((x<EPS)&&(x>-EPS))?1:0)
-
 //
 // some userful bit tricks
 //
@@ -155,8 +98,9 @@ int misc_thrdPriority(void);
 int misc_createDir(const char *sPathName);
 int misc_get_datetime(int* y, int* m, int* d, int* h, int* min, int* s);
 void misc_get_datetimestr(char* buf, int len);
+int misc_daemon(int nochdir, int noclose);
 int misc_becomeDaemon(int flags);
 double misc_gettimeofday();
 void misc_gen_datetimestr(char* buf, int len);
 int misc_day_diff(int year_start, int month_start, int day_start, int year_end, int month_end, int day_end);
-#endif
+#endif /* MISC_H */

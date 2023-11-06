@@ -1,6 +1,26 @@
 #ifndef PLT_H
 #define PLT_H
 
+#include <errno.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <fcntl.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/types.h> /* Type definitions used by many programs */
+#include <stdio.h>     /* Standard I/O functions */
+#include <stdlib.h>    /* Prototypes of commonly used library functions,
+                           plus EXIT_SUCCESS and EXIT_FAILURE constants */
+#include <unistd.h>    /* Prototypes for many system calls */
+#include <errno.h>     /* Declares errno and defines error constants */
+#include <string.h>    /* Commonly used string-handling functions */
+#include <stdbool.h>   /* 'bool' type plus 'true' and 'false' constants */
+#include <fcntl.h>
+#include <time.h>
+#include <sys/time.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/sysinfo.h>
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -27,6 +47,8 @@
 #include <time.h>
 #include <termios.h>
 #include <dirent.h>
+#include <sys/stat.h>
+#include <uuid4.h>
 
 /* component */
 #include "cJSON.h"
@@ -36,16 +58,19 @@
 #include "MQTTClientPersistence.h"
 #include "zlog.h"
 
+#include "log.h"
+#include "misc.h"
+#include "sm.h"
+#include "comm.h"
+
 /* util */
 #include "mqtt_ringbuffer.h"
 #include "tbmqtt_ringbuffer.h"
 #include "tbmqtt_cache.h"
-#include "test_ringbuffer.h"
-#include "misc.h"
-#include "log.h"
 #include "shm.h"
 #include "mqtt.h"
 #include "tbmqtt.h"
+#include "mqtt_cache.h"
 
 /* device */
 #include "chan_ringbuffer.h"
@@ -59,6 +84,8 @@
 #include "sta.h"
 #include "cloud.h"
 #include "tb.h"
+#include "mbs.h"
+
 
 #define CHAN_NBR_MAX 8
 
@@ -206,46 +233,6 @@ struct shm_t
     unsigned char buf[SHMBUFSIZE];
 };
 
-struct chan_t
-{
-    // char szProtocol[16];
-    double rstcnt;
-    char servip[16];
-    int servport;
-    // int slaveaddr;
-    char szinfo[32];
-    int cmd;
-    int state;
-    char szState[16];
-    int err;
-    int dbg;
-    int en;
-    int mbsidx; /* MB[] index */
-    int mbsdevm;
-    int mbsdevidx;
-    modbus_t *ctx;
-    modbus_mapping_t *mb_mapping;
-    int fd;
-    int baud;
-    char szdev[32];
-    int port;
-    char szparity[8];
-    char szmode[32];
-    int mode;
-
-    int sockfd;
-    struct sockaddr_in servAdr;
-    ring_buffer_t *ring_buffer;
-    ring_buffer_t *ring_buffer_tx;
-
-    // int bEnable;
-    unsigned int errcnt;
-    unsigned int errcnt_max; // max errCnt in 5min
-
-    pthread_mutex_t mutex;
-    pthread_mutex_t mutexdat;
-};
-
 enum sta_err_t
 {
     STAERR_NONE = 0,
@@ -302,42 +289,6 @@ struct dbcbparam_t
     int idx;
     int ret;
     int nrow; // enabled row
-};
-
-struct mqtt_t
-{
-    int dbg;
-    MQTTClient cli;
-    int enable;
-    char szservip[32];
-    int servport;
-    char szclientid[64];
-    char szaccesstoken[64];
-    char szusername[64];
-    char szpasswd[64];
-    char sztopic[128];
-    char szdatatopic[128];
-    char szcmdtopic[128];
-    int connlost;
-    int conncnt;
-    MQTTClient_deliveryToken token;
-    MQTTClient_connectOptions conn_opts;
-    int cmd;
-
-    double txbuf_usage; /* 0-100 */
-    double rxbuf_usage; /* 0-100 */
-
-    double pub_starttime;
-    double pub_endtime;
-    double pub_totaltime; //
-    double pub_totalcnt;
-    double pub_max;
-    double pub_ave;
-
-    // int tick;
-
-    struct statemachine_t sm;
-    struct comm_t comm;
 };
 
 struct mdl_t

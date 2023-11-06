@@ -14,14 +14,15 @@
  *    Ian Craggs - initial contribution
  *    Ian Craggs - add full capability
  *******************************************************************************/
+#include "plt.h"
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
-
-#include "plt.h"
+#include "tbmqtt_sm.h"
 #include "tbmqtt_cache.h"
+
 #define TBMQTT_CACHE_DATA_BASE "../data/tbmqtt.db"
 #define TBMQTT_CACHE_TABLE "tbmqtt_cache"
 #define TX_BUFF_TO_CACHE_USAGE (75.0)
@@ -35,6 +36,8 @@ static pthread_mutex_t tbmqtt_rxbuf_mutex;
 
 static void *tbmqtt_cache_handle = NULL;
 
+struct tbmqtt_t tbmqtt;
+
 double tbmqtt_get_timeofday()
 {
     struct timeval tv;
@@ -46,9 +49,11 @@ double tbmqtt_get_timeofday()
 
 static void tbmqtt_connlost(void *context, char *cause)
 {
-    struct tbmqtt_t *dev = &mdl.tbmqtt;
+    struct tbmqtt_t *dev = &tbmqtt;
+
     log_dbg("%s, mqtt connection lost, cause: %s\n", __func__, cause);
     dev->connlost = 1;
+    dev->connLostCnt++;
 
     /*
         tbmqtt_lock_txbuf();
@@ -66,7 +71,7 @@ static void tbmqtt_connlost(void *context, char *cause)
 
 static int tbmqtt_msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message)
 {
-    struct tbmqtt_t *dev = &mdl.tbmqtt;
+    struct tbmqtt_t *dev = &tbmqtt;
     struct statemachine_t *sm = &dev->sm;
     int rc = 0;
     tbmqtt_ringbuffer_element_t e;
@@ -77,20 +82,9 @@ static int tbmqtt_msgarrvd(void *context, char *topicName, int topicLen, MQTTCli
     // log_dbg("%s, Message arrived, topic:%s topic len:%d payload len:%d", __func__, topicName,topicLen, message->payloadlen);
     if (message)
     {
-        pdst = e.sztopic;
-        psrc = topicName;
-        for (i = 0; i < topicLen; i++)
-        {
-            *pdst++ = *psrc++;
-        }
-        *pdst = 0;
-        pdst = e.szpayload;
-        psrc = message->payload;
-        for (i = 0; i < message->payloadlen; i++)
-        {
-            *pdst++ = *psrc++;
-        }
-        *pdst = 0;
+        strcpy(e.sztopic, topicName);
+        strncpy(e.szpayload, (const char*)message->payload, message->payloadlen);
+
         if (dev->dbg)
         {
             log_dbg("%s, Message arrived, topic:%s topic len:%d payload len:%d", __func__, topicName, topicLen, message->payloadlen);
@@ -169,7 +163,7 @@ static int tbmqtt_msgarrvd(void *context, char *topicName, int topicLen, MQTTCli
 
 static void tbmqtt_delivered(void *context, MQTTClient_deliveryToken dt)
 {
-    struct tbmqtt_t *dev = &mdl.tbmqtt;
+    struct tbmqtt_t *dev = &tbmqtt;
     if (dev->dbg)
     {
         log_dbg("%s, Message with token value %d delivery confirmed", __func__, dt);
@@ -180,15 +174,21 @@ int tbmqtt_connect(void)
 {
     int ret = 0;
     int rc;
-    char buf[256];
-    struct tbmqtt_t *mqtt = &mdl.tbmqtt;
+    char buf[1024];
+    struct tbmqtt_t *mqtt = &tbmqtt;
     int qos = 2;
 
     MQTTClient_connectOptions tmpconn_opts = MQTTClient_connectOptions_initializer;
     mqtt->conn_opts = tmpconn_opts;
 
     sprintf(buf, "tcp://%s:%d", mqtt->szservip, mqtt->servport);
-    MQTTClient_create(&mqtt->cli, buf, mqtt->szclientid, MQTTCLIENT_PERSISTENCE_NONE, NULL);
+    if ((rc = MQTTClient_create(&mqtt->cli, buf, mqtt->szclientid, MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTCLIENT_SUCCESS)
+    {
+        log_dbg("%s, MQTTClient_create fail:%s", __func__, MQTTClient_strerror(rc));
+        ret = -1;
+        goto leave;
+    }
+
     mqtt->conn_opts.keepAliveInterval = 100;
     mqtt->conn_opts.cleansession = 1;
     mqtt->conn_opts.username = mqtt->szaccesstoken;
@@ -198,7 +198,7 @@ int tbmqtt_connect(void)
     MQTTClient_setCallbacks(mqtt->cli, NULL, tbmqtt_connlost, tbmqtt_msgarrvd, NULL);
     if ((rc = MQTTClient_connect(mqtt->cli, &mqtt->conn_opts)) != MQTTCLIENT_SUCCESS)
     {
-        log_dbg("%s, MQTTClient_connect fail:%d", __func__, rc);
+        log_dbg("%s, MQTTClient_connect fail:%s", __func__, MQTTClient_strerror(rc));
         ret = -1;
         goto leave;
     }
@@ -214,6 +214,12 @@ int tbmqtt_connect(void)
 
 leave:
     return ret;
+}
+
+int tbmqtt_get_state()
+{
+    struct tbmqtt_t *dev = &tbmqtt;
+    return dev->sm.state;
 }
 
 /*  tx ringbuffer handle  */
@@ -283,52 +289,76 @@ int tbmqtt_pub(char *sztopic, char *szpayload)
     double pub_time;
     int ret = 0;
     int rc;
-    struct tbmqtt_t *dev = &mdl.tbmqtt;
-    MQTTClient_message msg = MQTTClient_message_initializer;
+    struct tbmqtt_t *dev = &tbmqtt;
 
+    if (dev->dbg)
+    {
+        log_dbg("%s Message with delivery token:%d, topic:%s, payload:%s\n",
+                __func__, dev->token, sztopic, szpayload);
+    }
+
+    MQTTClient_message msg = MQTTClient_message_initializer;
     dev->pub_starttime = tbmqtt_get_timeofday();
     msg.payload = szpayload;
     msg.payloadlen = (int)strlen(szpayload);
     msg.qos = 1;
     msg.retained = 0;
-    MQTTClient_publishMessage(dev->cli, sztopic, &msg, &dev->token);
+#ifdef DEBUG_MQTT
+    log_dbg("Publish");
+#endif
+    rc = MQTTClient_publishMessage(dev->cli, sztopic, &msg, &dev->token);
+    if (rc != MQTTCLIENT_SUCCESS)
+    {
+        log_dbg("%s, MQTTClient_publisMessage fail:%s", __func__, MQTTClient_strerror(rc));
+        dev->pub_failed++;
+        ret = -1;
+        goto leave;
+    }
     // printf("Waiting for up to %d seconds for publication of %s\n"
     //         "on topic %s for client with ClientID: %s\n",
     //         (int)(TIMEOUT/1000), PAYLOAD, TOPIC, CLIENTID);
+#ifdef DEBUG_MQTT
+    log_dbg("Wait for completion");
+#endif
     rc = MQTTClient_waitForCompletion(dev->cli, dev->token, 100000L);
-    if (dev->dbg)
+    if (rc != MQTTCLIENT_SUCCESS)
     {
-        log_info("%s, Message with delivery token %d delivered,topic:%s",
-                 __func__, dev->token, sztopic);
-        log_info("%s,rc:%d payload:%s", __func__, rc, szpayload);
-    }
-    if (rc != 0)
-    {
+        log_dbg("%s, MQTTClient_waitForCompletion fail:%s", __func__, MQTTClient_strerror(rc));
+        dev->pub_failed++;
         ret = -2;
         goto leave;
     }
     else
     {
+#ifdef DEBUG_MQTT
+        log_dbg("Done");
+#endif
         dev->pub_endtime = tbmqtt_get_timeofday();
         pub_time = dev->pub_endtime - dev->pub_starttime;
-        dev->pub_totalcnt += 1;
-        dev->pub_totaltime += pub_time;
-        dev->pub_ave = dev->pub_totaltime / dev->pub_totalcnt;
-        if (pub_time > dev->pub_max)
+        dev->pubTotalCnt += 1;
+        dev->pubTotalTime += pub_time;
+        dev->pubAvg = dev->pubTotalTime / dev->pubTotalCnt;
+        if (pub_time > dev->pubMax)
         {
-            dev->pub_max = pub_time;
+            dev->pubMax = pub_time;
         }
-        if (dev->pub_totalcnt > 1000000)
+        if (dev->pubTotalCnt > 1000000)
         {
-            dev->pub_totalcnt = 0.0;
-            dev->pub_totaltime = 0.0;
-            dev->pub_ave = 0.0;
-            dev->pub_max = 0.0;
+            dev->pubTotalCnt = 0.0;
+            dev->pubTotalTime = 0.0;
+            dev->pubAvg = 0.0;
+            dev->pubMax = 0.0;
         }
+        if (dev->pub_failed > dev->pub_maxFailcnt)
+        {
+            dev->pub_maxFailcnt = dev->pub_failed;
+        }
+        dev->pub_totalFailcnt += dev->pub_failed;
+        dev->pub_failed = 0;
     }
 
 leave:
-    if (ret != 0)
+    if (dev->dbg && ret != 0)
     {
         log_dbg("%s, ret:%d", __func__, ret);
     }
@@ -337,13 +367,13 @@ leave:
 
 int tbmqtt_send_sm_cmd(int cmd)
 {
-    mdl.tbmqtt.cmd = cmd;
+    tbmqtt.cmd = cmd;
     log_dbg("%s, cmd:%d", __func__, cmd);
 }
 
 static void tbmqtt_deal_with_cache(void)
 {
-    struct tbmqtt_t *dev = &mdl.tbmqtt;
+    struct tbmqtt_t *dev = &tbmqtt;
     double *txbuf_usage = &dev->txbuf_usage;
     tbmqtt_ringbuffer_element_t e;
     int rc = 0;
@@ -425,213 +455,19 @@ static void tbmqtt_db_cache_thrd_main(void *param)
     log_dbg("%s, --", __func__);
 }
 
-static void tbmqtt_update(void)
+static void *tbmqtt_thrd_main(void *param)
 {
-    struct tbmqtt_t *dev = &mdl.tbmqtt;
-
-    dev->txbuf_usage = (double)tbmqtt_get_txbuf_used() / (double)tbmqtt_get_txbuf_size() * 100;
-    dev->rxbuf_usage = (double)tbmqtt_get_rxbuf_used() / (double)tbmqtt_get_rxbuf_size() * 100;
-}
-
-static void tbmqtt_sm_offline()
-{
-    struct tbmqtt_t *dev = &mdl.tbmqtt;
-    struct statemachine_t *sm = &dev->sm;
-    int *state = &dev->sm.state;
-    char *szstate = dev->sm.szstate;
-    int *step = &dev->sm.step;
-    int *count = &dev->sm.count;
-    int *cmd = &dev->cmd;
-
-    if (*step == 0)
-    { // entry
-        log_dbg("%s, state:%s, step:%d, entry", __func__, szstate, *step);
-        *cmd = CMD_SM_READY;
-        *step = 10;
-    }
-    else if (*step == 10)
-    { // wait cmd
-        if (*cmd == CMD_SM_READY)
-        { // ready cmd
-            log_dbg("%s, state:%s, step:%d, get ready cmd, try to connect", __func__, szstate, *step);
-            *cmd = CMD_SM_DONE;
-            if (tbmqtt_connect() < 0)
-            {
-                log_dbg("%s, state:%s, step:%d, tbmqtt connect fail, re-connect 10 seconds later", __func__, szstate, *step);
-                if (dev->cli != NULL)
-                {
-                    MQTTClient_destroy(&dev->cli);
-                }
-                *count = 0;
-            }
-            else
-            {
-                dev->connlost = 0;
-                log_dbg("%s, state:%s, step:%d, connect ok, goto ready", __func__, szstate, *step);
-                tbmqtt_set_state(SMST_READY, SMERR_NONE);
-            }
-        }
-        else
-        {
-            (*step)++;
-            if (*count >= 1000)
-            { // 10s
-                *count = 0;
-                if (dev->enable)
-                {
-                    log_dbg("%s, state:%s, step:%d, 10 seconds passed, try to connect", __func__, szstate, *step);
-                    if (tbmqtt_connect() < 0)
-                    {
-                        if (dev->cli != NULL)
-                        {
-                            MQTTClient_destroy(&dev->cli);
-                        }
-                        log_dbg("%s, state:%s, step:%d, connect fail, re-connet 10 seconds later", __func__, szstate, *step);
-                        *count = 0;
-                    }
-                    else
-                    {
-                        dev->connlost = 0;
-                        log_dbg("%s, state:%s, step:%d, connect ok, goto ready", __func__, szstate, *step);
-                        tbmqtt_set_state(SMST_READY, SMERR_NONE);
-                    }
-                }
-                else
-                {
-                    ; /* nothing to do */
-                }
-            }
-        }
-    }
-}
-
-static void tbmqtt_sm_ready()
-{
-    struct tbmqtt_t *dev = &mdl.tbmqtt;
-    struct statemachine_t *sm = &dev->sm;
-    int *state = &dev->sm.state;
-    char *szstate = dev->sm.szstate;
-    int *step = &dev->sm.step;
-    int *count = &dev->sm.count;
-    int *cmd = &dev->cmd;
-    int rc = 0;
-    tbmqtt_ringbuffer_element_t e;
-    char *topicName = NULL;
-    int topicLen;
-    MQTTClient_message *message = NULL;
-    char *pdst = NULL;
-    char *psrc = NULL;
-    int i;
-
-    if (*step == 0)
-    { // entry
-        log_dbg("%s, state:%s, step:%d, entry", __func__, szstate, *step);
-        *cmd = CMD_SM_DONE;
-        *step = 10;
-    }
-    else if (*step == 10)
-    { // wait and chk
-        if (*cmd == CMD_SM_OFFLINE)
-        { // offline cmd
-            log_dbg("%s, state:%s, step:%d, get offline cmd, goto offline", __func__, szstate, *step);
-            *cmd = CMD_SM_DONE;
-            if (dev->cli != NULL)
-            {
-                MQTTClient_disconnect(dev->cli, 0);
-                MQTTClient_destroy(&dev->cli);
-            }
-            tbmqtt_set_state(SMST_OFFLINE, SMERR_NONE);
-        }
-        else if (dev->connlost)
-        {
-            log_dbg("%s, state:%s, step:%d, connection lost detected, goto offline", __func__, szstate, *step);
-            if (dev->cli != NULL)
-            {
-                MQTTClient_destroy(&dev->cli);
-            }
-            tbmqtt_set_state(SMST_OFFLINE, SMERR_NONE);
-        }
-        else
-        {
-            // rc = MQTTClient_receive(dev->cli, &topicName, &topicLen, &message, 30);
-            // if (message){
-            //     pdst = e.sztopic;
-            //     psrc = topicName;
-            //     for( i = 0; i < topicLen; i++ ){
-            //         *pdst++ = *psrc++;
-            //     }
-            //     *pdst = 0;
-            //     pdst = e.szpayload;
-            //     psrc = message->payload;
-            //     for( i = 0; i < message->payloadlen; i++ ){
-            //         *pdst++ = *psrc++;
-            //     }
-            //     *pdst = 0;
-            //     if( dev->dbg ){
-            //         log_dbg("%s, Message arrived, topic:%s topic len:%d payload len:%d", __func__, topicName,topicLen, message->payloadlen);
-            //         log_dbg("%s, payload:%s", __func__, e.szpayload);
-            //     }
-            //     MQTTClient_freeMessage(&message);
-            //     MQTTClient_free(topicName);
-            //     tbmqtt_lock_rxbuf();
-            //     tbmqtt_queue_rxbuf(e);
-            //     tbmqtt_unlock_rxbuf();
-            // }
-            // if (rc != 0){
-            //     dev->connlost = 1;
-            //     log_dbg("%s, MQTTClient_receive fail:%d, set connlost=1", __func__, rc);
-            // }
-
-            tbmqtt_lock_txbuf();
-            rc = tbmqtt_peek_txbuf(&e, 0);
-            tbmqtt_unlock_txbuf();
-            if (rc == 1)
-            {
-                if (tbmqtt_pub(e.sztopic, e.szpayload) == 0)
-                {
-                    tbmqtt_lock_txbuf();
-                    tbmqtt_dequeue_txbuf(&e);
-                    tbmqtt_unlock_txbuf();
-                }
-            }
-        }
-    }
-}
-
-static void tbmqtt_sm(void)
-{
-    struct tbmqtt_t *dev = &mdl.tbmqtt;
-    struct statemachine_t *sm = &dev->sm;
-
-    tbmqtt_update();
-
-    switch (tbmqtt_get_state())
-    {
-    case SMST_OFFLINE:
-        tbmqtt_sm_offline();
-        break;
-    case SMST_READY:
-        tbmqtt_sm_ready();
-        break;
-
-    default:
-        log_dbg("%s, never reach here", __func__);
-        break;
-    }
-}
-
-static void tbmqtt_thrd(void *param)
-{
-    struct tbmqtt_t *dev = &mdl.tbmqtt;
+    struct tbmqtt_t *dev = &tbmqtt;
     struct statemachine_t *sm = &dev->sm;
     pthread_t xthrd;
     log_dbg("%s, ++", __func__);
 
     /* reset pub timings */
-    dev->pub_totalcnt = 0.0;
-    dev->pub_totaltime = 0.0;
-    dev->pub_ave = 0.0;
-    dev->pub_max = 0.0;
+    dev->connLostCnt = 0;
+    dev->pubTotalCnt = 0.0;
+    dev->pubTotalTime = 0.0;
+    dev->pubAvg = 0.0;
+    dev->pubMax = 0.0;
     tbmqtt_init_txbuf();
     tbmqtt_init_rxbuf();
     pthread_mutex_init(&tbmqtt_txbuf_mutex, NULL);
@@ -641,78 +477,31 @@ static void tbmqtt_thrd(void *param)
     // if(pthread_create(&xthrd,NULL, tbmqtt_db_cache_thrd_main, NULL)!=0){
     //     log_dbg( "%s, create tbmqtt_db_cache_thrd_main fail", __func__);
     // }
-    tbmqtt_set_state(SMST_OFFLINE, SMERR_NONE);
+    tbmqtt_sm_init();
 
     while (1)
     {
         tbmqtt_sm();
         // tbmqtt_deal_with_cache();
-        usleep(50000); /* 50ms */
+        usleep(10000); /* 10ms */
     }
 
     log_dbg("%s, --", __func__);
+    return NULL;
 }
 
 int tbmqtt_set_dbg(int val)
 {
-    struct tbmqtt_t *dev = &mdl.tbmqtt;
+    struct tbmqtt_t *dev = &tbmqtt;
     dev->dbg = val;
     return 0;
-}
-
-int tbmqtt_get_state()
-{
-    return mdl.tbmqtt.sm.state;
-}
-
-int tbmqtt_set_state(int state, int errcode)
-{
-    struct tbmqtt_t *dev = &mdl.tbmqtt;
-    dev->sm.state = state;
-    dev->sm.errcode = errcode;
-    dev->sm.step = 0;
-    dev->sm.count = 0;
-
-    switch (state)
-    {
-    case SMST_OFFLINE:
-        strcpy(dev->sm.szstate, "offline");
-        break;
-
-    case SMST_READY:
-        strcpy(dev->sm.szstate, "ready");
-        break;
-
-    case SMST_ERR:
-        strcpy(dev->sm.szstate, "err");
-        break;
-
-    default:
-        strcpy(dev->sm.szstate, "unknown");
-        break;
-    }
-
-    switch (errcode)
-    {
-    case SMERR_NONE:
-        strcpy(dev->sm.szerrcode, "none");
-        break;
-
-    case SMERR_NA:
-        strcpy(dev->sm.szerrcode, "na");
-        break;
-
-    default:
-        strcpy(dev->sm.szerrcode, "unknown");
-        break;
-    }
 }
 
 static int tbmqtt_dbcb_0(void *para, int ncolumn, char **columnvalue, char *columnname[])
 {
     int i;
     struct dbcbparam_t *pcbparam = (struct dbcbparam_t *)para;
-    struct tbmqtt_t *dev = &mdl.tbmqtt;
+    struct tbmqtt_t *dev = &tbmqtt;
 
     pcbparam->nrow++;
     log_dbg("%s, ++,row:%d, col:%d", __func__, pcbparam->nrow, ncolumn);
@@ -725,7 +514,11 @@ static int tbmqtt_dbcb_0(void *para, int ncolumn, char **columnvalue, char *colu
 
     for (i = 0; i < ncolumn; i++)
     {
-        if (strcmp("servip", columnname[i]) == 0)
+        if (strcmp("enable", columnname[i]) == 0)
+        {
+            dev->enable = atoi(columnvalue[i]);
+        }
+        else if (strcmp("servip", columnname[i]) == 0)
         {
             strcpy(dev->szservip, columnvalue[i]);
         }
@@ -737,9 +530,21 @@ static int tbmqtt_dbcb_0(void *para, int ncolumn, char **columnvalue, char *colu
         {
             strcpy(dev->szclientid, columnvalue[i]);
         }
+        else if (strcmp("username", columnname[i]) == 0)
+        {
+            strcpy(dev->szusername, columnvalue[i]);
+        }
+        else if (strcmp("passwd", columnname[i]) == 0)
+        {
+            strcpy(dev->szpasswd, columnvalue[i]);
+        }
         else if (strcmp("accesstoken", columnname[i]) == 0)
         {
             strcpy(dev->szaccesstoken, columnvalue[i]);
+        }
+        else if (strcmp("timezone", columnname[i]) == 0)
+        {
+            dev->timezone = atoi(columnvalue[i]);
         }
     }
 
@@ -756,11 +561,22 @@ int tbmqtt_reset()
     tbmqtt_unlock_txbuf();
 }
 
+int tbmqtt_get_cmd()
+{
+    return tbmqtt.cmd;
+}
+
+void tbmqtt_reset_cmd()
+{
+    tbmqtt.cmd = CMD_SM_DONE;
+}
+
 int tbmqtt_init()
 {
     pthread_t xthrd;
     int rc = 0;
     int ret = 0;
+    struct tbmqtt_t *dev = &tbmqtt;
     char *errmsg = NULL;
     char sql[1024];
     struct dbcbparam_t cbparam;
@@ -770,7 +586,7 @@ int tbmqtt_init()
 
     plt_lock_projdb();
     db = plt_get_projdb();
-    sprintf(sql, "select * from tbmqtt_sta");
+    sprintf(sql, "select * from tbmqtt");
     cbparam.nrow = 0;
     rc = sqlite3_exec(db, sql, tbmqtt_dbcb_0, (void *)&cbparam, &errmsg);
     plt_unlock_projdb();
@@ -784,9 +600,9 @@ int tbmqtt_init()
     }
     else
     {
-        if (pthread_create(&xthrd, NULL, tbmqtt_thrd, NULL) != 0)
+        if (pthread_create(&xthrd, NULL, tbmqtt_thrd_main, NULL) != 0)
         {
-            log_dbg("%s, create tbmqtt thrd fail", __func__);
+            log_dbg("%s, create tbmqtt_thrd_sm fail", __func__);
             ret = -1;
         }
     }
@@ -813,4 +629,95 @@ int tbmqtt_get_rxbuf_used(void)
 int tbmqtt_get_rxbuf_size(void)
 {
     return tbmqtt_ringbuffer_size(&tbmqtt_rxbuf);
+}
+
+int tbmqtt_get_tz()
+{
+    return tbmqtt.timezone;
+}
+
+char *tbmqtt_get_state_str(void)
+{
+    return tbmqtt.sm.szstate;
+}
+
+int tbmqtt_get_stp(void)
+{
+    return tbmqtt.sm.step;
+}
+
+char *tbmqtt_get_err_str(void)
+{
+    return tbmqtt.sm.szerrcode;
+}
+
+int tbmqtt_get_tick(void)
+{
+    return tbmqtt.sm.tick;
+}
+
+double tbmqtt_get_timing_ave(void)
+{
+    return tbmqtt.sm.timing_ave;
+}
+
+double tbmqtt_get_timing_cur(void)
+{
+    return tbmqtt.sm.timing_cur;
+}
+
+double tbmqtt_get_timing_max(void)
+{
+    return tbmqtt.sm.timing_max;
+}
+
+int tbmqtt_get_enable(void)
+{
+    return tbmqtt.enable;
+}
+
+char *tbmqtt_get_servip_str(void)
+{
+    return tbmqtt.szservip;
+}
+
+int tbmqtt_get_servport(void)
+{
+    return tbmqtt.servport;
+}
+
+char *tbmqtt_get_client_id(void)
+{
+    return tbmqtt.szclientid;
+}
+
+double tbmqtt_get_txbuf_usage(void)
+{
+    return tbmqtt.txbuf_usage;
+}
+
+char *tbmqtt_get_access_token(void)
+{
+    return tbmqtt.szaccesstoken;
+}
+
+int tbmqtt_get_tool_data(char *buf)
+{
+    struct tbmqtt_t *dev = &tbmqtt;
+    struct statemachine_t *sm = &dev->sm;
+
+    char buf_temp[8192];
+
+    sprintf(buf, " TBMQTT ");
+
+    sm_get_summary(sm, buf_temp, sizeof(buf_temp));
+    strcat(buf, buf_temp);
+
+    sprintf(buf_temp, "   en:%d tz:%d servip:%s servport:%d clientid:%s accesstoken:%s txbufusage:%.1f rxbufusage:%.1f lost count:%d \n",
+            dev->enable, dev->timezone, dev->szservip, dev->servport, dev->szclientid, dev->szaccesstoken, dev->txbuf_usage, dev->rxbuf_usage, dev->connLostCnt);
+    strcat(buf, buf_temp);
+
+    sprintf(buf_temp, " dbg:%d", dev->dbg);
+    strcat(buf, buf_temp);
+    return 0;
 }

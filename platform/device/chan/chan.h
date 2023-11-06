@@ -1,6 +1,7 @@
 #ifndef CHAN_H
 #define CHAN_H
 
+#if 0
 /* special address description flags for the CAN_ID */
 #define CAN_EFF_FLAG 0x80000000U /* EFF/SFF is set in the MSB */
 #define CAN_RTR_FLAG 0x40000000U /* remote transmission request */
@@ -10,22 +11,6 @@
 #define CAN_SFF_MASK 0x000007FFU /* standard frame format (SFF) */
 #define CAN_EFF_MASK 0x1FFFFFFFU /* extended frame format (EFF) */
 #define CAN_ERR_MASK 0x1FFFFFFFU /* omit EFF, RTR, ERR flags */
-
-enum chanmode_t{
-    CHANMODE_UNKNOWN = 0,
-    CHANMODE_SERIAL,
-    CHANMODE_SOCKET_CAN,
-    CHANMODE_TCPSERV_CAN,
-    CHANMODE_MODBUS_RTU,
-    CHANMODE_MODBUS_RTU_SLAVE,
-    CHANMODE_MODBUS_RTU_OVER_TCP,
-    CHANMODE_MODBUS_RTU_OVER_UDP,
-    CHANMODE_MODBUS_TCP,
-    CHANMODE_MODBUS_TCP_SLAVE,
-    CHANMODE_UDP2SERIAL,
-    CHANMODE_TCP2SERIAL,
-    //CHANMODE_TCP2CAN,
-};
 
 /*
     * Controller Area Network Identifier structure
@@ -156,27 +141,162 @@ struct ring_buffer_t {
 
 #define CAN_INV_FILTER 0x20000000U /* to be set in can_filter.can_id */
 
-#define chan_lock(idx) pthread_mutex_lock(&mdl.chan[idx].mutex)
-#define chan_unlock(idx) pthread_mutex_unlock(&mdl.chan[idx].mutex)
+#endif
 
+//#define chan_lock(idx) pthread_mutex_lock(&chan[idx].mutex)
+//#define chan_unlock(idx) pthread_mutex_unlock(&chan[idx].mutex)
+
+#include "netinet/in.h"
+#include "modbus.h"
+#include "chan_serial_ringbuffer.h"
+#include "chan_tcpservcan_ringbuffer.h"
+#include "chan_socketcan_ringbuffer.h"
+#include "chan_serial_ringbuffer.h"
+#include "comm.h"
+#include "sm.h"
+
+struct chanthrd_param_t
+{
+    int bidx;
+    int idx;
+    int ival;
+};
+
+enum chanmode_t{
+    CHANMODE_UNKNOWN = 0,
+    CHANMODE_SERIAL,
+    CHANMODE_SOCKET_CAN,
+    CHANMODE_TCPSERV_CAN,
+    CHANMODE_MODBUS_RTU,
+    CHANMODE_MODBUS_RTU_SLAVE,
+    CHANMODE_MODBUS_TCP,
+    CHANMODE_MODBUS_TCP_SLAVE,
+    CHANMODE_UDP2SERIAL,
+    CHANMODE_TCP2SERIAL,
+    CHANMODE_DI,
+    CHANMODE_DO,
+    //CHANMODE_TCP2CAN,
+};
+
+typedef struct _modbus modbus_t;
+struct chan_t
+{
+    //char szProtocol[16];
+    double rstcnt;
+    char servip[16];
+    int servport;
+    //int slaveaddr;
+    char szinfo[32];
+    int cmd;
+    int state;
+    char szState[16];
+    int err;
+    int dbg;
+    int en;
+    //int mbsidx; /* MB[] index */
+    //int mbsdevm;
+    //int mbsdevidx;
+    modbus_t* ctx;
+    modbus_mapping_t *mb_mapping;
+    int fd;
+    int baud;
+    char szparity[8];
+    char szdev[32];
+    int port;
+    char szmode[32];
+    int mode;
+
+    int sockfd;
+    struct sockaddr_in servAdr;
+
+    //int bEnable;
+    unsigned int errcnt;
+    unsigned int errcnt_max; // max errCnt in 5min
+
+    pthread_mutex_t mutex;
+    pthread_mutex_t mutexdat;
+
+    int started;
+    int restart_times;
+    int retry_times;
+
+    chan_serial_ringbuffer_t* serial_rxrb;
+    chan_serial_ringbuffer_t* serial_txrb;
+    chan_socketcan_ringbuffer_t* socketcan_rxrb;
+    chan_socketcan_ringbuffer_t* socketcan_txrb;
+    chan_tcpservcan_ringbuffer_t* tcpservcan_rxrb;
+    chan_tcpservcan_ringbuffer_t* tcpservcan_txrb;    
+};
 int chan_init( );
+int chan_check_open();
+int chan_check_close();
 int chan_read_bits(int idx, int slaveaddr, int regaddr, int nb, unsigned char* dest );
 int chan_write_multi_registers( int idx, int slaveaddr, int regaddr, int nb, unsigned short* regval );
 int chan_read_holdingregisters( int idx, int slaveaddr, int regaddr, int nb, unsigned short* regval );
 int chan_write_single_register(int idx, int slaveaddr, int regaddr, int regval );
+int chan_write_single_register_with_retry(int idx, int slaveaddr, int regaddr, int regval );
 int chan_write_bit( int idx, int slaveaddr, int addr, int status );
+int chan_write_bits( int idx, int slaveaddr, int addr, int nb,unsigned char *status );
+int chan_read_gpio( int idx, int* val);
+int chan_write_gpio( int idx, int val);
 int chan_reset( int idx );
 int chan_start( int idx );
 int chan_read_input_bits( int idx, int slaveaddr, int regaddr, int nb, unsigned char* dest );
+int chan_read_input_bits_with_retry(int idx, int slaveaddr, int regaddr, int nb, unsigned char* dest );
 int chan_read_input_registers( int idx, int slaveaddr, int regaddr, int nb, unsigned short* dest );
+int chan_read_input_registers_with_retry(int idx, int slaveaddr, int regaddr, int nb, unsigned short* regval );
 int chan_set_dbg( int idx, int enable );
 int chan_set_en( int idx, int enable );
 int chan_get_en( int idx );
 void chan_set_mbs( int idx, int mbsdevm, int mbsdevidx );
-int chan_txrb_used(int idx);
-int chan_rxrb_used(int idx);
-int chan_rxrb_dequeue_arr(int idx, chan_ring_buffer_element_t* data, chan_ring_buffer_size_t len);
-void chan_txrb_queue_arr(int idx, chan_ring_buffer_element_t* data, chan_ring_buffer_size_t size);
-int chan_rxrb_init(int idx);
-int chan_txrb_init(int idx);
+int chan_read_holdingregisters_with_retry(int idx, int slaveaddr, int regaddr, int nb, unsigned short* regval );
+int chan_mode_str2nbr(char* szmode);
+int chan_set_nbr(int nbr);
+int chan_get_nbr();
+int chan_get_mode(int idx);
+
+void chan_serial_rxrb_init(int idx);
+void chan_serial_txrb_init(int idx);
+void chan_serial_rxrb_queue(int idx, chan_serial_ringbuffer_element_t e);
+int chan_serial_rxrb_dequeue_arr(int idx, chan_serial_ringbuffer_element_t* e, int len);
+int chan_serial_rxrb_num_items(int idx);
+
+int chan_serial_txrb_num_items( int idx );
+int chan_serial_txrb_dequeue_arr( int idx, chan_serial_ringbuffer_element_t* e, int len );
+void chan_serial_txrb_queue_arr( int idx, chan_serial_ringbuffer_element_t* e, int len );
+
+char* chan_get_info_str(int idx);
+char* chan_get_servip_str(int idx);
+int chan_get_servport(int idx);
+int chan_get_baud(int idx);
+char* chan_get_parity_str(int idx);
+char* chan_get_dev_str(int idx);
+int chan_get_port(int idx);
+char* chan_get_mode_str(int idx);
+int chan_get_errcnt(int idx);
+int chan_get_started(int idx);
+int chan_get_restart_times(int idx);
+int chan_get_retry_times(int idx);
+int chan_get_dbg(int idx);
+
+void chan_lock(int idx);
+void chan_unlock(int idx); 
+int chan_get_tool_data(int idx,char* buf);
+int chan_get_tool_all_data(char* buf);
+int chan_get_bkds_data(char *buf);
+
+int chan_socketcan_rxrb_num_items(int idx);
+void chan_socketcan_rxrb_queue(int idx, chan_socketcan_ringbuffer_element_t e);
+void chan_socketcan_rxrb_queue_arr(int idx, chan_socketcan_ringbuffer_element_t *e, int len);
+int chan_socketcan_rxrb_dequeue(int idx, chan_socketcan_ringbuffer_element_t *e);
+int chan_socketcan_rxrb_dequeue_arr(int idx, chan_socketcan_ringbuffer_element_t *e, int len);
+int chan_socketcan_txrb_num_items(int idx);
+int chan_socketcan_txrb_dequeue_arr(int idx, chan_socketcan_ringbuffer_element_t *e, int len);
+int chan_socketcan_txrb_dequeue(int idx, chan_socketcan_ringbuffer_element_t *e);
+void chan_socketcan_txrb_queue(int idx, chan_socketcan_ringbuffer_element_t e);
+void chan_tcpservcan_rxrb_queue(int idx, chan_tcpservcan_ringbuffer_element_t e);
+int chan_tcpservcan_txrb_num_items(int idx);
+
+int chan_tcpservcan_txrb_dequeue_arr(int idx, chan_tcpservcan_ringbuffer_element_t *e, int len);
+
 #endif /* CHAN_H */
