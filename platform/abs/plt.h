@@ -48,7 +48,6 @@
 #include <termios.h>
 #include <dirent.h>
 #include <sys/stat.h>
-#include <uuid4.h>
 
 /* component */
 #include "cJSON.h"
@@ -57,6 +56,9 @@
 #include "MQTTClient.h"
 #include "MQTTClientPersistence.h"
 #include "zlog.h"
+#include "uuid4.h"
+#include "snowid.h"
+#define SNOW_ID_BUF_SIZE 34
 
 #include "log.h"
 #include "misc.h"
@@ -76,8 +78,7 @@
 /* device */
 #include "chan_ringbuffer.h"
 #include "chan.h"
-#include "snowid.h"
-#define SNOW_ID_BUF_SIZE 34
+
 
 #include "mac.h"
 

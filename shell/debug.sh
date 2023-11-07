@@ -1,1 +1,1 @@
-gdb -cd=./ -directory=../ -ex "set pagination 0" -ex "set detach-on-fork off" -ex "set thread apply all bt" --args ../bin/stad -t appl -d 
+gdb -cd=./ -directory=../ -ex "set pagination 0" -ex "set detach-on-fork off" -ex "set thread apply all bt" --args ../bin/pcs_sim -t appl -a 1 -b /dev/ttymxc1 -c pcs-n9-sim -s 119.45.101.222 -p 1883

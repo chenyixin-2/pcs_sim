@@ -1,1 +1,1 @@
-ps aux | grep stad
+ps aux | grep pcs_sim

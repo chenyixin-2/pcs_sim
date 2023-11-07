@@ -1,1 +1,1 @@
-gdb -cd=./ -directory=../ -ex "set pagination off" -ex "set disable-randomization on"  -ex "set detach-on-fork off" -p $(pgrep -f "stad -t tool")
+gdb -cd=./ -directory=../ -ex "set pagination off" -ex "set disable-randomization on"  -ex "set detach-on-fork off" -p $(pgrep -f "pcs_sim -t tool")

@@ -1,1 +1,1 @@
-../bin/stad -t tool
+../bin/pcs_sim -t tool

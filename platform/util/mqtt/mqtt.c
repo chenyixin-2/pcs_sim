@@ -35,7 +35,6 @@ static pthread_mutex_t mqtt_txbuf_mutex;
 static mqtt_ringbuffer_t mqtt_rxbuf;
 static pthread_mutex_t mqtt_rxbuf_mutex;
 
-struct mqtt_t mqtt;
 static void *mqtt_cache_handle = NULL;
 
 double mqtt_get_timeofday()
@@ -54,7 +53,7 @@ static void mqtt_connlost(void *context, char *cause)
 
     /*
         mqtt_lock_txbuf();
-        MQTTClient_destroy(&mqtt->cli);
+        MQTTClient_destroy(&MDL.mqtt->cli);
 
         mqtt->reconncnt++;
         if(mqtt_connect()!=0){
@@ -185,7 +184,7 @@ int mqtt_connect(void)
     {
         ret = -1;
     }
-    sprintf(mqtt->szclientid, "mdl-%d-%s", MDL.adr, buf_uuid);
+    sprintf(mqtt->szclientid, "%s-%d-%s", MDL.szDevName, MDL.adr, buf_uuid);
     MQTTClient_connectOptions tmpconn_opts = MQTTClient_connectOptions_initializer;
     mqtt->conn_opts = tmpconn_opts;
     strcpy(mqtt->szservip, MDL.szmqtt_servip);
@@ -202,11 +201,11 @@ int mqtt_connect(void)
     MQTTClient_setCallbacks(mqtt->cli, NULL, mqtt_connlost, NULL, NULL);
     if ((rc = MQTTClient_connect(mqtt->cli, &mqtt->conn_opts)) != MQTTCLIENT_SUCCESS)
     {
-        log_dbg("%s, MQTTClient_connect fail, msg:%s  %s %s", __func__, MQTTClient_strerror(rc), mqtt->szclientid, mqtt->szusername);
+        log_dbg("%s, MQTTClient_connect fail, msg:%s", __func__, MQTTClient_strerror(rc));
         ret = -1;
     }
 
-    sprintf(buf, "%s-ctl", MDL.szDevName);
+    sprintf(buf, "%s-ctl", MDL.szDevName);    
     rc = MQTTClient_subscribe(mqtt->cli, buf, qos);
     if (rc != MQTTCLIENT_SUCCESS && rc != qos)
     {
@@ -226,9 +225,9 @@ int mqtt_connect(void)
 
 int mqtt_sub(const char *topic, int qos)
 {
-    struct mqtt_t *dev = &mqtt;
+    struct mqtt_t *dev = &MDL.mqtt;
     int rc = 0;
-    
+
     rc = MQTTClient_subscribe(dev->cli, topic, qos);
     if (rc != MQTTCLIENT_SUCCESS)
     {
@@ -240,12 +239,12 @@ int mqtt_sub(const char *topic, int qos)
 
 int mqtt_get_state()
 {
-    return mqtt.sm.state;
+    return MDL.mqtt.sm.state;
 }
 
 int mqtt_get_tz()
 {
-    return mqtt.timezone;
+    return MDL.mqtt.timezone;
 }
 
 /*  tx ringbuffer handle  */
@@ -281,12 +280,12 @@ int mqtt_peek_txbuf(mqtt_ringbuffer_element_t *data, mqtt_ringbuffer_size_t inde
 
 int mqtt_get_cmd()
 {
-    return mqtt.cmd;
+    return MDL.mqtt.cmd;
 }
 
 void mqtt_reset_cmd()
 {
-    mqtt.cmd = CMD_SM_DONE;
+    MDL.mqtt.cmd = CMD_SM_DONE;
 }
 
 /*  rx ringbuffer handle  */
@@ -384,13 +383,13 @@ leave:
 
 int mqtt_send_sm_cmd(int cmd)
 {
-    mqtt.cmd = cmd;
+    MDL.mqtt.cmd = cmd;
     log_dbg("%s, cmd:%d", __func__, cmd);
 }
 
 static void mqtt_deal_with_cache(void)
 {
-    struct mqtt_t *dev = &mqtt;
+    struct mqtt_t *dev = &MDL.mqtt;
     double *txbuf_usage = &dev->txbuf_usage;
     mqtt_ringbuffer_element_t e;
     int rc = 0;
@@ -474,12 +473,13 @@ static void mqtt_db_cache_thrd_main(void *param)
 
 static void *mqtt_thrd_main(void *param)
 {
-    struct mqtt_t *dev = &mqtt;
+    struct mqtt_t *dev = &MDL.mqtt;
     pthread_t xthrd;
 
     log_dbg("%s, ++", __func__);
 
     /* reset pub timings */
+    dev->enable = 1;
     dev->pub_totalcnt = 0.0;
     dev->pub_totaltime = 0.0;
     dev->pub_ave = 0.0;
@@ -491,15 +491,9 @@ static void *mqtt_thrd_main(void *param)
 
     mqtt_sm_init();
 
-    // if(pthread_create(&xthrd,NULL, mqtt_db_cache_thrd_main, NULL)!=0){
-    //     log_dbg( "%s, create mqtt_db_cache_thrd_main fail", __func__);
-    // }
-
-    // sleep(30); // NOTE !!!
     while (1)
     {
         mqtt_sm();
-        // mqtt_deal_with_cache();
         usleep(10000); /* 10ms */
     }
 
@@ -573,21 +567,21 @@ int mqtt_init()
 
     log_dbg("%s, ++", __func__);
 
-    plt_lock_projdb();
-    db = plt_get_projdb();
-    sprintf(sql, "select * from mqtt");
-    cbparam.nrow = 0;
-    rc = sqlite3_exec(db, sql, mqtt_dbcb_0, (void *)&cbparam, &errmsg);
-    plt_unlock_projdb();
-    if (rc != SQLITE_OK)
-    {
-        ret = -1;
-    }
-    else if (cbparam.ret != 0)
-    {
-        ret = -2;
-    }
-    else
+    // plt_lock_projdb();
+    // db = plt_get_projdb();
+    // sprintf(sql, "select * from mqtt");
+    // cbparam.nrow = 0;
+    // rc = sqlite3_exec(db, sql, mqtt_dbcb_0, (void *)&cbparam, &errmsg);
+    // plt_unlock_projdb();
+    // if (rc != SQLITE_OK)
+    // {
+    //     ret = -1;
+    // }
+    // else if (cbparam.ret != 0)
+    // {
+    //     ret = -2;
+    // }
+    // else
     {
         // sprintf(dev->szclientid, "ctn-%d-%s", ctn[1].idx_in_ess, ctn[1].szprojId);
         if (pthread_create(&xthrd, NULL, mqtt_thrd_main, NULL) != 0)
@@ -623,72 +617,72 @@ int mqtt_get_rxbuf_size(void)
 
 char *mqtt_get_state_str(void)
 {
-    return mqtt.sm.szstate;
+    return MDL.mqtt.sm.szstate;
 }
 
 int mqtt_get_stp(void)
 {
-    return mqtt.sm.step;
+    return MDL.mqtt.sm.step;
 }
 
 char *mqtt_get_err_str(void)
 {
-    return mqtt.sm.szerrcode;
+    return MDL.mqtt.sm.szerrcode;
 }
 
 int mqtt_get_tick(void)
 {
-    return mqtt.sm.tick;
+    return MDL.mqtt.sm.tick;
 }
 
 double mqtt_get_timing_ave(void)
 {
-    return mqtt.sm.timing_ave;
+    return MDL.mqtt.sm.timing_ave;
 }
 
 double mqtt_get_timing_cur(void)
 {
-    return mqtt.sm.timing_cur;
+    return MDL.mqtt.sm.timing_cur;
 }
 
 double mqtt_get_timing_max(void)
 {
-    return mqtt.sm.timing_max;
+    return MDL.mqtt.sm.timing_max;
 }
 
 int mqtt_get_enable(void)
 {
-    return mqtt.enable;
+    return MDL.mqtt.enable;
 }
 
 char *mqtt_get_servip_str(void)
 {
-    return mqtt.szservip;
+    return MDL.mqtt.szservip;
 }
 
 int mqtt_get_servport(void)
 {
-    return mqtt.servport;
+    return MDL.mqtt.servport;
 }
 
 char *mqtt_get_client_id(void)
 {
-    return mqtt.szclientid;
+    return MDL.mqtt.szclientid;
 }
 
 double mqtt_get_txbuf_usage(void)
 {
-    return mqtt.txbuf_usage;
+    return MDL.mqtt.txbuf_usage;
 }
 
 char *mqtt_get_access_token(void)
 {
-    return mqtt.szaccesstoken;
+    return MDL.mqtt.szaccesstoken;
 }
 
 int mqtt_get_tool_data(char *buf)
 {
-    struct mqtt_t *dev = &mqtt;
+    struct mqtt_t *dev = &MDL.mqtt;
     struct statemachine_t *sm = &dev->sm;
 
     char buf_temp[8192];
@@ -707,7 +701,7 @@ int mqtt_get_tool_data(char *buf)
 
 int mqtt_set_dbg(int val)
 {
-    struct mqtt_t *dev = &mqtt;
+    struct mqtt_t *dev = &MDL.mqtt;
     dev->dbg = val;
     return 0;
 }

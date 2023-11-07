@@ -57,7 +57,7 @@ static void tbmqtt_connlost(void *context, char *cause)
 
     /*
         tbmqtt_lock_txbuf();
-        MQTTClient_destroy(&mqtt->cli);
+        MQTTClient_destroy(&MDL.mqtt->cli);
 
         mqtt->reconncnt++;
         if(tbmqtt_connect()!=0){
@@ -182,7 +182,7 @@ int tbmqtt_connect(void)
     mqtt->conn_opts = tmpconn_opts;
 
     sprintf(buf, "tcp://%s:%d", mqtt->szservip, mqtt->servport);
-    if ((rc = MQTTClient_create(&mqtt->cli, buf, mqtt->szclientid, MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTCLIENT_SUCCESS)
+    if ((rc = MQTTClient_create(mqtt->cli, buf, mqtt->szclientid, MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTCLIENT_SUCCESS)
     {
         log_dbg("%s, MQTTClient_create fail:%s", __func__, MQTTClient_strerror(rc));
         ret = -1;

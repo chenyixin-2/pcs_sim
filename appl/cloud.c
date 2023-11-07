@@ -28,7 +28,7 @@ int cloud_init(void)
     return ret;
 }
 
-static void cloud_upload_sys()
+static void cloud_update()
 {
     struct cloud_t *c = &MDL.cloud;
     mqtt_ringbuffer_element_t e;
@@ -36,9 +36,11 @@ static void cloud_upload_sys()
     char itm_buf[2048];
     int i;
 
+    log_dbg("%s,", __func__);
+
     /* 1 seconds */
     if (c->sys_timer[0]++ >= c->sys_intv[0])
-    {
+    {        
         c->sys_timer[0] = 0;
         e.cmd = CMD_MQTT_SENDKV;
         e.sztopic[0] = 0;
@@ -56,6 +58,8 @@ static void cloud_upload_sys()
         misc_get_datetimestr(ts_buf, sizeof(ts_buf));
         sprintf(e.szpayload, "{\"ts\":\"%s\",\"data\":%s}", ts_buf, ostr);
         sprintf(e.sztopic, "%s", MDL.szDevName);
+
+        log_dbg("%s, topic:%s, payload:%s", __func__,e.sztopic, e.szpayload);
 
         mqtt_lock_txbuf();
         mqtt_queue_txbuf(e);
@@ -175,5 +179,5 @@ JSON_DONE:
 void cloud_exe(void)
 {
     cloud_proc_recv();
-    cloud_upload_sys();
+    cloud_update();
 }
