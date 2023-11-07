@@ -31,7 +31,7 @@ static void mqtt_sm_offline()
     struct mqtt_t *dev = &MDL.mqtt;
     struct statemachine_t *sm = &MDL.mqtt.sm;
 
-    log_dbg("mqtt sm offline, state:%s, step:%d", sm_get_szstate(sm), sm_get_step(sm));
+    // log_dbg("mqtt sm offline, state:%s, step:%d", sm_get_szstate(sm), sm_get_step(sm));
     if (sm_get_step(sm) == 0)
     { // entry
         mqtt_reset_cmd();
@@ -62,7 +62,7 @@ static void mqtt_sm_offline()
         else
         {
             sm_inc_count(sm);
-            log_dbg("%s, state:%s, step:%d, wait ready cmd, count:%d", __func__, sm_get_szstate(sm), sm_get_step(sm), sm_get_count(sm));
+            // log_dbg("%s, state:%s, step:%d, wait ready cmd, count:%d", __func__, sm_get_szstate(sm), sm_get_step(sm), sm_get_count(sm));
             if (sm_get_count(sm) >= 10)
             { /* 10 seconds */                
                 sm_set_count(sm, 0);
@@ -188,7 +188,7 @@ void mqtt_sm(void)
     dev->txbuf_usage = (double)mqtt_get_txbuf_used() / (double)mqtt_get_txbuf_size() * 100;
     dev->rxbuf_usage = (double)mqtt_get_rxbuf_used() / (double)mqtt_get_rxbuf_size() * 100;
 
-    log_dbg("%s, mqtt state : %d", __func__, mqtt_get_state());
+    // log_dbg("%s, mqtt state : %d", __func__, mqtt_get_state());
 
     switch (mqtt_get_state())
     {

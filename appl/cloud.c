@@ -59,7 +59,7 @@ static void cloud_update()
         sprintf(e.szpayload, "{\"ts\":\"%s\",\"data\":%s}", ts_buf, ostr);
         sprintf(e.sztopic, "%s", MDL.szDevName);
 
-        log_dbg("%s, topic:%s, payload:%s", __func__,e.sztopic, e.szpayload);
+        // log_dbg("%s, topic:%s, payload:%s", __func__,e.sztopic, e.szpayload);
 
         mqtt_lock_txbuf();
         mqtt_queue_txbuf(e);
