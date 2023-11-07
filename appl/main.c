@@ -9,15 +9,15 @@
 
 static void sim_init(void)
 {
-	mdl.uab = 400.1;
-	mdl.ubc = 400.2;
-	mdl.uca = 400.3;
+	MDL.uab = 400.1;
+	MDL.ubc = 400.2;
+	MDL.uca = 400.3;
 }
 
 int DAEMON = 0;
 int RUNTYPE = -1;
 int VERSION[3] = {2, 0, 5}; /* ONLY VERSION[0] is used */
-static const char *s_optstr = "a:b:cdep:s:t:";
+static const char *s_optstr = "a:b:c:dep:s:t:";
 int main(int argc, char *argv[])
 {
 	int ret = 0;
@@ -34,30 +34,32 @@ int main(int argc, char *argv[])
 		syslog(LOG_INFO, "%s,arg list,argv[%d]:%s", __func__, i, argv[i]);
 	}
 
-	strcpy(mdl.szdev, "Enjoy-100kW");
-
 	while ((ch = getopt(argc, argv, s_optstr)) != -1)
 	{
 		switch (ch)
 		{
 		case 'a':
-			mdl.adr = atoi(optarg);
+			MDL.adr = atoi(optarg);
 			syslog(LOG_INFO, "option a: %s \n", optarg);
 			break;
 		case 'b':
-			strcpy(mdl.szser, optarg);
+			strcpy(MDL.szSerial, optarg);
 			syslog(LOG_INFO, "option b: %s\n", optarg);
 			break;
+		case 'c':
+			strcpy(MDL.szDevName, optarg);
+			syslog(LOG_INFO, "option c: %s\n", optarg);
+			break;			
 		case 'd':
 			DAEMON = 1;
 			syslog(LOG_INFO, "option d\n");
 			break;
 		case 'p':
-			mdl.mqtt_servport = atoi(optarg);
+			MDL.mqtt_servport = atoi(optarg);
 			syslog(LOG_INFO, "option p : %s\n", optarg);
 			break;
 		case 's':
-			strcpy(mdl.szmqtt_servip, optarg);
+			strcpy(MDL.szmqtt_servip, optarg);
 			syslog(LOG_INFO, "option s : %s\n", optarg);
 			break;
 		case 't':

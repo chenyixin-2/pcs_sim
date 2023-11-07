@@ -1,7 +1,4 @@
-#include "log.h"
-#include "misc.h"
 #include "plt.h"
-#include "sta.h"
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -14,7 +11,8 @@ static int appl_init()
 {
     int ret = 0;
 
-    if (0)
+    log_dbg("%s, addr : %d, device name: %s, serial port: %s, mqtt srv ip: %s, mqtt srv port: %d  ++", __func__, MDL.adr, MDL.szDevName, MDL.szSerial, MDL.szmqtt_servip, MDL.mqtt_servport);
+    if (mdl_init() != 0)
     { // sta_init() != 0
         ret = -1;
     }
@@ -23,7 +21,7 @@ static int appl_init()
         ret = -1;
     }
 
-    log_dbg("%s, ret:%d", __func__, ret);
+    log_dbg("%s, -- ret:%d", __func__, ret);
     return ret;
 }
 

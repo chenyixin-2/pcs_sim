@@ -71,6 +71,7 @@
 #include "mqtt.h"
 #include "tbmqtt.h"
 #include "mqtt_cache.h"
+#include "mdl.h"
 
 /* device */
 #include "chan_ringbuffer.h"
@@ -81,7 +82,6 @@
 #include "mac.h"
 
 /* abs */
-#include "sta.h"
 #include "cloud.h"
 #include "tb.h"
 #include "mbs.h"
@@ -293,9 +293,9 @@ struct dbcbparam_t
 
 struct mdl_t
 {
-    char szdev[128];
-    char szser[128];
-    char adr;
+    char szDevName[128];
+    char szSerial[128];
+    int adr;
     char szmqtt_servip[16];
     int mqtt_servport;
 
@@ -363,7 +363,7 @@ struct mdl_t
     struct mac_t mac;
 };
 
-extern struct mdl_t mdl;
+extern struct mdl_t MDL;
 
 int plt_init_stp1();
 int plt_init_stp2();

@@ -10,8 +10,8 @@
 static sem_t *SEMSHMPING;
 static sem_t *SEMSHMPONG;
 static struct shm_t *pshm = NULL;
-static const char *pstr_sem_name_ping = "sta_sem_ping";
-static const char *pstr_sem_name_pong = "sta_sem_pong";
+static const char *pstr_sem_name_ping = "mdl_sem_ping";
+static const char *pstr_sem_name_pong = "mdl_sem_pong";
 
 static void *shm_thrd_main(void *thd_param)
 {
@@ -31,17 +31,9 @@ static void *shm_thrd_main(void *thd_param)
 		switch (shmgetcmd())
 		{
 		case CMD_STA_FETCH:
-			misc_gen_datetimestr(mdl.sztime, sizeof(mdl.sztime));
-			memcpy((void *)shmbuf, (void *)(&mdl), sizeof(struct mdl_t));
+			misc_gen_datetimestr(MDL.sztime, sizeof(MDL.sztime));
+			memcpy((void *)shmbuf, (void *)(&MDL), sizeof(struct mdl_t));
 			ack();
-			break;
-
-		case CMD_STA_SENDCMD:
-			pshm->rsp = sta_send_cmd(param->val);
-			break;
-
-		case CMD_STA_SET_ACTIVEPSET:
-			pshm->rsp = sta_set_aps(param->val);
 			break;
 
 		case CMD_CHAN_SET_DBG:

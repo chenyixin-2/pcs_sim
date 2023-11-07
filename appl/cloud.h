@@ -16,6 +16,5 @@ long long cloud_get_unixts();
 int cloud_init();
 int cloud_enable_upload();
 void cloud_exe( void );
-void cloud_upload_init_data(char *buf);
 
 #endif /* CLOUD_H */

@@ -50,7 +50,7 @@ double mqtt_get_timeofday()
 static void mqtt_connlost(void *context, char *cause)
 {
     log_dbg("%s, mqtt connection lost, cause: %s\n", __func__, cause);
-    mdl.mqtt.connlost = 1;
+    MDL.mqtt.connlost = 1;
 
     /*
         mqtt_lock_txbuf();
@@ -68,8 +68,8 @@ static void mqtt_connlost(void *context, char *cause)
 
 static int mqtt_msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message)
 {
-    struct mqtt_t *dev = &mdl.mqtt;
-    struct statemachine_t *sm = &mdl.mqtt.sm;
+    struct mqtt_t *dev = &MDL.mqtt;
+    struct statemachine_t *sm = &MDL.mqtt.sm;
     int rc = 0;
     mqtt_ringbuffer_element_t e;
     char *pdst = NULL;
@@ -157,7 +157,7 @@ static int mqtt_msgarrvd(void *context, char *topicName, int topicLen, MQTTClien
 
 static void mqtt_delivered(void *context, MQTTClient_deliveryToken dt)
 {
-    struct mqtt_t *dev = &mdl.mqtt;
+    struct mqtt_t *dev = &MDL.mqtt;
     if (dev->dbg)
     {
         log_dbg("%s, Message with token value %d delivery confirmed", __func__, dt);
@@ -170,8 +170,8 @@ int mqtt_connect(void)
 {
     int ret = 0;
     int rc;
-    char mqtt_server_url[256];
-    struct mqtt_t *mqtt = &mdl.mqtt;
+    char buf[256];
+    struct mqtt_t *mqtt = &MDL.mqtt;
     int qos = 2;
 
     UUID4_STATE_T state;
@@ -185,14 +185,14 @@ int mqtt_connect(void)
     {
         ret = -1;
     }
-    sprintf(mqtt->szclientid, "mdl-%d-%s", mdl.adr, buf_uuid);
+    sprintf(mqtt->szclientid, "mdl-%d-%s", MDL.adr, buf_uuid);
     MQTTClient_connectOptions tmpconn_opts = MQTTClient_connectOptions_initializer;
     mqtt->conn_opts = tmpconn_opts;
-    strcpy(mqtt->szservip, mdl.szmqtt_servip);
-    mqtt->servport = mdl.mqtt_servport;
+    strcpy(mqtt->szservip, MDL.szmqtt_servip);
+    mqtt->servport = MDL.mqtt_servport;
     // sprintf(buf,"tcp://%s:%d",mqtt->szservip,mqtt->servport);
-    sprintf(mqtt_server_url, "%s:%d", mqtt->szservip, mqtt->servport);
-    MQTTClient_create(&mqtt->cli, mqtt_server_url, mqtt->szclientid, MQTTCLIENT_PERSISTENCE_NONE, NULL);
+    sprintf(buf, "%s:%d", mqtt->szservip, mqtt->servport);
+    MQTTClient_create(&mqtt->cli, buf, mqtt->szclientid, MQTTCLIENT_PERSISTENCE_NONE, NULL);
     mqtt->conn_opts.keepAliveInterval = 100;
     mqtt->conn_opts.cleansession = 1;
     // mqtt->conn_opts.username = mqtt->szaccesstoken;
@@ -206,8 +206,8 @@ int mqtt_connect(void)
         ret = -1;
     }
 
-    sprintf(mqtt_server_url, "%s-ctl", mdl.szdev);
-    rc = MQTTClient_subscribe(mqtt->cli, mqtt_server_url, qos);
+    sprintf(buf, "%s-ctl", MDL.szDevName);
+    rc = MQTTClient_subscribe(mqtt->cli, buf, qos);
     if (rc != MQTTCLIENT_SUCCESS && rc != qos)
     {
         ret = -2;
@@ -228,14 +228,13 @@ int mqtt_sub(const char *topic, int qos)
 {
     struct mqtt_t *dev = &mqtt;
     int rc = 0;
-    MQTTResponse response = MQTTResponse_initializer;
-    response = MQTTClient_subscribe5(dev->cli, topic, qos, NULL, NULL);
-    if (response.reasonCode != MQTTCLIENT_SUCCESS && response.reasonCode != qos)
+    
+    rc = MQTTClient_subscribe(dev->cli, topic, qos);
+    if (rc != MQTTCLIENT_SUCCESS)
     {
-        log_dbg("%s, MQTTClient_subscribe fail, rc: %d msg:%s", __func__, response.reasonCode, MQTTClient_strerror(response.reasonCode));
+        log_dbg("%s, MQTTClient_subscribe fail, rc: %d msg:%s", __func__, rc, MQTTClient_strerror(rc));
         rc = -1;
     }
-    MQTTResponse_free(response);
     return rc;
 }
 
@@ -326,25 +325,21 @@ int mqtt_pub(char *sztopic, char *szpayload)
     double pub_time;
     int ret = 0;
     int rc;
-    struct mqtt_t *dev = &mdl.mqtt;
+    struct mqtt_t *dev = &MDL.mqtt;
     MQTTClient_message msg = MQTTClient_message_initializer;
     dev->pub_starttime = mqtt_get_timeofday();
     msg.payload = szpayload;
     msg.payloadlen = (int)strlen(szpayload);
     msg.qos = 1;
     msg.retained = 0;
-    MQTTResponse response = MQTTResponse_initializer;
-    response = MQTTClient_publishMessage5(dev->cli, sztopic, &msg, &dev->token);
-    if (response.reasonCode != MQTTCLIENT_SUCCESS)
+    rc = MQTTClient_publishMessage(dev->cli, sztopic, &msg, &dev->token);
+    if (rc != MQTTCLIENT_SUCCESS)
     {
-        log_dbg("%s, Failed to publish message: topic %s, payload %s, error msg : %s\n", __func__, sztopic, szpayload, MQTTClient_strerror(response.reasonCode));
+        log_dbg("%s, Failed to publish message: topic %s, payload %s, error msg : %s\n", __func__, sztopic, szpayload, MQTTClient_strerror(rc));
         dev->pub_failed++;
         ret = -2;
         goto leave;
     }
-    // printf("Waiting for up to %d seconds for publication of %s\n"
-    //         "on topic %s for client with ClientID: %s\n",
-    //         (int)(TIMEOUT/1000), PAYLOAD, TOPIC, CLIENTID);
     rc = MQTTClient_waitForCompletion(dev->cli, dev->token, 100000L);
     if (rc != MQTTCLIENT_SUCCESS)
     {
@@ -516,7 +511,7 @@ static int mqtt_dbcb_0(void *para, int ncolumn, char **columnvalue, char *column
 {
     int i;
     struct dbcbparam_t *pcbparam = (struct dbcbparam_t *)para;
-    struct mqtt_t *dev = &mdl.mqtt;
+    struct mqtt_t *dev = &MDL.mqtt;
 
     pcbparam->nrow++;
     log_dbg("%s, ++,row:%d, col:%d", __func__, pcbparam->nrow, ncolumn);
@@ -570,7 +565,7 @@ int mqtt_init()
     pthread_t xthrd;
     int rc = 0;
     int ret = 0;
-    struct mqtt_t *dev = &mdl.mqtt;
+    struct mqtt_t *dev = &MDL.mqtt;
     char *errmsg = NULL;
     char sql[1024];
     struct dbcbparam_t cbparam;

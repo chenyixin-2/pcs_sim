@@ -98,11 +98,11 @@ float mac_get_disk_occupy()
 int mac_init( void )
 {
     int ret = 0;
-    mdl.mac.cal_timer = 0;
-    mdl.mac.cal_intv = 60;
-    mdl.mac.cpu_occupy = 0.0;
-    mdl.mac.mem_occupy = 0.0;
-    mdl.mac.disk_occupy = 0.0;
+    MDL.mac.cal_timer = 0;
+    MDL.mac.cal_intv = 60;
+    MDL.mac.cpu_occupy = 0.0;
+    MDL.mac.mem_occupy = 0.0;
+    MDL.mac.disk_occupy = 0.0;
     mac_get_cpu_info(&cpu_info[0]);
 
     log_dbg("%s, ret:%d", __func__, ret);
@@ -112,12 +112,12 @@ int mac_init( void )
 
 void mac_exe( void )
 {
-    if( mdl.mac.cal_timer++ >= mdl.mac.cal_intv ){
-        mdl.mac.cal_timer = 0;
+    if( MDL.mac.cal_timer++ >= MDL.mac.cal_intv ){
+        MDL.mac.cal_timer = 0;
         mac_get_cpu_info(&cpu_info[1]);
-        mdl.mac.cpu_occupy = mac_cal_cpu_occupy(&cpu_info[0], &cpu_info[1]);
+        MDL.mac.cpu_occupy = mac_cal_cpu_occupy(&cpu_info[0], &cpu_info[1]);
         cpu_info[0] = cpu_info[1];
-        mdl.mac.mem_occupy = mac_get_mem_occupy();
+        MDL.mac.mem_occupy = mac_get_mem_occupy();
         //mdl.mac.disk_occupy = mac_get_disk_occupy();
     }
 }

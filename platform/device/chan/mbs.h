@@ -1,7 +1,5 @@
-#ifndef __MBS_H__
-#define __MBS_H__
+#ifndef MBS_H
+#define MBS_H
 
-int mbs_start_ctn(int port);
-int mbs_start_EMA(int port);
-int mbs_start_Enjoy100kW();
-#endif
+int mbs_start_MDL();
+#endif /* MBS_H */

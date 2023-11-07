@@ -1,13 +1,13 @@
 #include "plt.h"
 
-struct mdl_t mdl;
+struct mdl_t MDL;
 static int cfg_db_init()
 {
     int ret = 0;
     int rc = 0;
     char buf[128];
 
-    sprintf(buf, "../cfg/sta.db");
+    sprintf(buf, "../cfg/mdl.db");
 
     if (access(buf, 0) < 0)
     {
@@ -15,10 +15,10 @@ static int cfg_db_init()
     }
     else
     {
-        rc = sqlite3_open(buf, &mdl.cfg_db);
+        rc = sqlite3_open(buf, &MDL.cfg_db);
         if (rc == SQLITE_OK)
         {
-            pthread_mutex_init(&mdl.cfg_db_mutex, NULL);
+            pthread_mutex_init(&MDL.cfg_db_mutex, NULL);
         }
         else
         {
@@ -32,17 +32,17 @@ static int cfg_db_init()
 
 void plt_lock_cfgdb()
 {
-    pthread_mutex_lock(&mdl.cfg_db_mutex);
+    pthread_mutex_lock(&MDL.cfg_db_mutex);
 }
 
 void plt_unlock_cfgdb()
 {
-    pthread_mutex_unlock(&mdl.cfg_db_mutex);
+    pthread_mutex_unlock(&MDL.cfg_db_mutex);
 }
 
 sqlite3 *plt_get_cfgdb()
 {
-    return mdl.cfg_db;
+    return MDL.cfg_db;
 }
 static int project_db_init()
 {
@@ -58,10 +58,10 @@ static int project_db_init()
     }
     else
     {
-        rc = sqlite3_open(buf, &mdl.proj_db);
+        rc = sqlite3_open(buf, &MDL.proj_db);
         if (rc == SQLITE_OK)
         {
-            pthread_mutex_init(&mdl.proj_db_mutex, NULL);
+            pthread_mutex_init(&MDL.proj_db_mutex, NULL);
         }
         else
         {
@@ -75,17 +75,17 @@ static int project_db_init()
 
 void plt_lock_projdb()
 {
-    pthread_mutex_lock(&mdl.proj_db_mutex);
+    pthread_mutex_lock(&MDL.proj_db_mutex);
 }
 
 void plt_unlock_projdb()
 {
-    pthread_mutex_unlock(&mdl.proj_db_mutex);
+    pthread_mutex_unlock(&MDL.proj_db_mutex);
 }
 
 sqlite3 *plt_get_projdb()
 {
-    return mdl.proj_db;
+    return MDL.proj_db;
 }
 extern int VERSION[3];
 
@@ -162,12 +162,12 @@ int plt_init_stp1()
     return ret;
 }
 
-int plt_init_stp2(int bmdl)
+int plt_init_stp2()
 {
     int ret = 0;
     log_dbg("%s, ++", __func__);
 
-    if (mbs_start_Enjoy100kW() != 0)
+    if (mbs_start_MDL() != 0)
     { // chan_init() != 0
         ret = -1;
     }

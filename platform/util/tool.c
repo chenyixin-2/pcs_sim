@@ -99,7 +99,7 @@ static int update_station(void)
     }
     else
     {
-        mdl = *(struct mdl_t *)SHMBUF.buf;
+        MDL = *(struct mdl_t *)SHMBUF.buf;
     }
 leave:
     if (ret < 0)
@@ -112,9 +112,9 @@ leave:
 static void print_chan()
 {
     int i;
-    struct mdl_t *sta = &mdl;
+    struct mdl_t *sta = &MDL;
     struct chan_t *chan;
-    int *channbr = &mdl.channbr;
+    int *channbr = &MDL.channbr;
 
     printf(REVERSE "CHAN" NONE "  nbr:%d\n", *channbr);
     for (i = 1; i <= *channbr; i++)
@@ -128,7 +128,7 @@ static void print_chan()
 
 static void print_mqtt()
 {
-    struct mqtt_t *dev = &mdl.mqtt;
+    struct mqtt_t *dev = &MDL.mqtt;
     printf(REVERSE "MQTT" NONE "  \n");
     printf("  stat:" YELLOW "%s" NONE " err:%s stp:%d servip:%s servport:%d clientid:%s username:%s passwd:%s\n",
            dev->sm.szstate, dev->sm.szerrcode, dev->sm.step, dev->szservip, dev->servport, dev->szclientid, dev->szusername, dev->szpasswd);
@@ -139,7 +139,7 @@ static void print_mqtt()
 
 static void print_tbmqtt()
 {
-    struct tbmqtt_t *dev = &mdl.tbmqtt;
+    struct tbmqtt_t *dev = &MDL.tbmqtt;
     printf(REVERSE "TB MQTT" NONE "  \n");
     printf("  stat:" YELLOW "%s" NONE " err:%s stp:%d servip:%s servport:%d clientid:%s accesstoken:%s \n",
            dev->sm.szstate, dev->sm.szerrcode, dev->sm.step, dev->szservip, dev->servport, dev->szclientid, dev->szaccesstoken);
@@ -151,9 +151,9 @@ static void print_tbmqtt()
 static void print_chan_bytab()
 {
     int i;
-    struct mdl_t *sta = &mdl;
+    struct mdl_t *sta = &MDL;
     struct chan_t *chan;
-    int *channbr = &mdl.channbr;
+    int *channbr = &MDL.channbr;
 
     //
     // CHAN  moved to print_chan
@@ -177,10 +177,10 @@ static void print_chan_bytab()
 
 static void print_sta(void)
 {
-    struct mdl_t *dev = &mdl;
+    struct mdl_t *dev = &MDL;
 
     printf(REVERSE "STA" NONE " prj_id:%s sw_ver:%d.%d.%d time:%s time_zone:%d\n",
-           mdl.szprojId, mdl.version[0], mdl.version[1], mdl.version[2], dev->sztime, dev->time_zone);
+           MDL.szprojId, MDL.version[0], MDL.version[1], MDL.version[2], dev->sztime, dev->time_zone);
     printf(" stat:" YELLOW "%s" NONE " err:%s stp:%d info:%s ap:" L_GREEN "%d" NONE " aps:%d soc:" L_GREEN "%.1f" NONE " d|c:%d|%d norm_cap:%d pow:%d\n",
            dev->sm.szstate, dev->sm.szerrcode, dev->sm.step,
            dev->szinfo, dev->pow.active_p, dev->pow.active_p_set, dev->pow.soc,
@@ -188,9 +188,9 @@ static void print_sta(void)
            dev->pow.norm_cap, dev->pow.norm_pow);
 
     printf(" Cloud upload_en:%d sys_intv[0]:%d [1]:%d [2]:%d\n",
-           mdl.cloud.upload_enable, mdl.cloud.sys_intv[0], mdl.cloud.sys_intv[1], mdl.cloud.sys_intv[2]);
+           MDL.cloud.upload_enable, MDL.cloud.sys_intv[0], MDL.cloud.sys_intv[1], MDL.cloud.sys_intv[2]);
     printf(" MAC cpu_occupy:%.1f mem:%.1f disk:%.1f\n",
-           mdl.mac.cpu_occupy, mdl.mac.mem_occupy, mdl.mac.disk_occupy);
+           MDL.mac.cpu_occupy, MDL.mac.mem_occupy, MDL.mac.disk_occupy);
 
     print_chan();
     print_mqtt();

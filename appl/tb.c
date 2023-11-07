@@ -115,8 +115,6 @@ static void tb_upload_param()
         e.szpayload[0] = 0;
 
         /* sw version */
-        sprintf(itm_buf, "'sw_ver':'%d', 'norm_cap':%d,'norm_pow':%d",
-                plt_get_sw_ver(), sta_get_norm_cap(), sta_get_norm_pow());
         sprintf(e.szpayload, "{'ts':%lld,'values':{%s}}", tb_get_ts(), itm_buf);
         strcpy(e.sztopic, "v1/devices/me/telemetry");
 
@@ -146,10 +144,6 @@ static void tb_upload_sys()
 
             // sys state and err
             itm_buf[0] = 0;
-            sprintf(itm_buf, "'state':'%s','err':'%s','ap':%d",            
-                    sta_get_state_str(),
-                    sta_get_err_str(),
-                    sta_get_ap());
             sprintf(e.szpayload, "{'ts':%lld,'values':{%s}}", tb_get_ts(), itm_buf);
             strcpy(e.sztopic, "v1/devices/me/telemetry");
             tbmqtt_lock_txbuf();
@@ -169,9 +163,6 @@ static void tb_upload_sys()
             e.szpayload[0] = 0;
 
             itm_buf[0] = 0;
-            /* cpu mem disk */
-            sprintf(buf, "'soc':%.1f", sta_get_soc());
-            strcat(itm_buf, buf);
 
             sprintf(e.szpayload, "{'ts':%lld,'values':{%s}}", tb_get_ts(), itm_buf);
             strcpy(e.sztopic, "v1/devices/me/telemetry");
@@ -311,16 +302,6 @@ static void tb_proc_recv()
                         }
                     }
                 }
-                else if (strcmp(item->valuestring, "get_lock") == 0)
-                {
-                    sprintf(e.szpayload, "%d", dev->tb_lock);
-                    tb_send_rpc_response(e.sztopic, e.szpayload);
-                }
-                else if (strcmp(item->valuestring, "get_aps") == 0)
-                {
-                    sprintf(e.szpayload, "%d", sta_get_aps());
-                    tb_send_rpc_response(e.sztopic, e.szpayload);
-                }
                 else
                 {
                     if (dev->tb_lock)
@@ -331,27 +312,6 @@ static void tb_proc_recv()
                     {
                         if (strcmp(item->valuestring, "stdby") == 0)
                         {
-                            sta_send_cmd(CMD_SM_STDBY);
-                        }
-                        else if (strcmp(item->valuestring, "stop") == 0)
-                        {
-                            sta_send_cmd(CMD_SM_STOP);
-                        }
-                        else if (strcmp(item->valuestring, "ready") == 0)
-                        {
-                            sta_send_cmd(CMD_SM_READY);
-                        }
-                        else if (strcmp(item->valuestring, "offgrid") == 0)
-                        {
-                            sta_send_cmd(CMD_SM_OFFGRID);
-                        }
-                        else if (strcmp(item->valuestring, "active_aps") == 0)
-                        {
-                            if (tmpaps_received == 1)
-                            {
-                                sta_set_aps(tmpaps);
-                                tmpaps_received = 0;
-                            }
                         }
                         else if (strcmp(item->valuestring, "set_aps") == 0)
                         {
