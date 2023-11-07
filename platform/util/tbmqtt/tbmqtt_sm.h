@@ -1,5 +1,5 @@
-#ifndef __TBMQTT_SM_H__
-#define __TBMQTT_SM_H__
+#ifndef TBMQTT_SM_H
+#define TBMQTT_SM_H
 
 enum tbmqtt_err_t{
     TBMQTTERR_NONE = 0,
@@ -11,4 +11,4 @@ enum tbmqtt_err_t{
 int tbmqtt_sm_init();
 void tbmqtt_sm( void );
 
-#endif
+#endif /* TBMQTT_SM_H */

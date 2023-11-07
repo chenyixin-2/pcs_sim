@@ -1,5 +1,5 @@
-#ifndef __MQTT_CACHE_H__
-#define __MQTT_CACHE_H__
+#ifndef MQTT_CACHE_H
+#define MQTT_CACHE_H
 
 #include "mqtt_ringbuffer.h"
 
@@ -13,4 +13,4 @@ int mqtt_cache_get_memory_size(void* handle, long* size);
 void mqtt_cache_close(void* handle);
 int mqtt_cache_free_memory(void* handle);
 
-#endif
+#endif /* MQTT_CACHE_H */

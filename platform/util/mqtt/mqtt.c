@@ -14,12 +14,6 @@
  *    Ian Craggs - initial contribution
  *    Ian Craggs - add full capability
  *******************************************************************************/
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/time.h>
-#include <uuid4.h>
 #include "plt.h"
 
 #include <mqtt_sm.h>

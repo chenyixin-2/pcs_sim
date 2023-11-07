@@ -1,9 +1,5 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include "sqlite3.h"
+#include "plt.h"
 #include "mqtt_cache.h"
-#include "log.h"
 
 #define BUF_PAYLOAD_MAX_LEN (8000)
 #define BUF_TOPIC_MAX_LEN (128)

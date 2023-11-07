@@ -1,5 +1,4 @@
 #include "plt.h"
-#include "misc.h"
 
 /* Bit-mask values for 'flags' argument of becomeDaemon() */
 

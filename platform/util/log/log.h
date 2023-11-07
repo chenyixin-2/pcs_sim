@@ -1,5 +1,5 @@
-#ifndef __LOG_H__
-#define __LOG_H__
+#ifndef LOG_H
+#define LOG_H
 #include "zlog.h"
 #include <syslog.h>
 
@@ -20,4 +20,4 @@ int log_init();
 // #define log_err(format, ...)
 // #endif
 
-#endif
+#endif /* LOG_H */

@@ -15,11 +15,6 @@
  *    Ian Craggs - add full capability
  *******************************************************************************/
 #include "plt.h"
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/time.h>
 #include "tbmqtt_sm.h"
 #include "tbmqtt_cache.h"
 

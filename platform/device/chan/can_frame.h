@@ -1,5 +1,5 @@
-#ifndef __CAN_FRAME_H__
-#define __CAN_FRAME_H__
+#ifndef CAN_FRAME_H
+#define CAN_FRAME_H
 
 #include <sys/socket.h>
 #include <linux/types.h>
@@ -91,4 +91,4 @@ struct can_filter {
 
 #define CAN_INV_FILTER 0x20000000U /* to be set in can_filter.can_id */
 
-#endif
+#endif /* CAN_FRAME_H */

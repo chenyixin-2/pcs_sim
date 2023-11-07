@@ -22,8 +22,8 @@
 * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 * SOFTWARE.
 */
-#ifndef __SNOWID_H__
-#define __SNOWID_H__
+#ifndef SNOWID_H
+#define SNOWID_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -105,4 +105,4 @@ bool snow_get_id_as_binary(snow_id_binary_t snowid_as_bin);
 */
 bool snow_id_convert(snow_id_binary_t snowid_as_bin, const snow_id_t *snowid);
 
-#endif /* __SNOWID_H__ */
+#endif /* SNOWID_H */

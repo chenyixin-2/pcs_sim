@@ -1,55 +1,43 @@
 #ifndef PLT_H
 #define PLT_H
 
-#include <errno.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <fcntl.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/types.h> /* Type definitions used by many programs */
-#include <stdio.h>     /* Standard I/O functions */
-#include <stdlib.h>    /* Prototypes of commonly used library functions,
-                           plus EXIT_SUCCESS and EXIT_FAILURE constants */
-#include <unistd.h>    /* Prototypes for many system calls */
-#include <errno.h>     /* Declares errno and defines error constants */
-#include <string.h>    /* Commonly used string-handling functions */
-#include <stdbool.h>   /* 'bool' type plus 'true' and 'false' constants */
-#include <fcntl.h>
-#include <time.h>
-#include <sys/time.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <sys/sysinfo.h>
 #include <arpa/inet.h>
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
-#include <linux/sockios.h>
 #include <linux/if.h>
-#include <linux/if.h>
-#include <linux/types.h>
 #include <linux/socket.h>
+#include <linux/sockios.h>
+#include <linux/types.h>
+#include <math.h>
 #include <netinet/in.h>
 #include <pthread.h>
-#include <math.h>
+#include <semaphore.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 #include <string.h>
-#include <stdbool.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
 #include <sys/ioctl.h>
-#include <syslog.h>
-#include <time.h>
-#include <termios.h>
-#include <dirent.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/sysinfo.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <syslog.h>
+#include <termios.h>
+#include <time.h>
+#include <unistd.h>
 
 /* component */
+#include "mbs.h"
+#include "mb.h"
+#include "mbctx.h"
+
 #include "cJSON.h"
 #include "sqlite3.h"
 #include "modbus.h"
@@ -64,29 +52,26 @@
 #include "misc.h"
 #include "sm.h"
 #include "comm.h"
+#include "shm.h"
 
 /* util */
 #include "mqtt_ringbuffer.h"
 #include "tbmqtt_ringbuffer.h"
 #include "tbmqtt_cache.h"
-#include "shm.h"
 #include "mqtt.h"
 #include "tbmqtt.h"
 #include "mqtt_cache.h"
-#include "mdl.h"
 
 /* device */
 #include "chan_ringbuffer.h"
 #include "chan.h"
-
-
 #include "mac.h"
 
 /* abs */
 #include "cloud.h"
 #include "tb.h"
 #include "mbs.h"
-
+#include "mdl.h"
 
 #define CHAN_NBR_MAX 8
 

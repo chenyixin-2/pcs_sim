@@ -1,11 +1,4 @@
 #include "plt.h"
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <syslog.h>
-#include <unistd.h>
 
 static int appl_init()
 {

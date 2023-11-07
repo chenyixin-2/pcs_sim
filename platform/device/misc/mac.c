@@ -1,5 +1,4 @@
 #include "plt.h"
-#include <unistd.h>
 
 static struct cpu_info_t cpu_info[2];
 

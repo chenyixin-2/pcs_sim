@@ -1,9 +1,5 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include "sqlite3.h"
+#include "plt.h"
 #include "tbmqtt_cache.h"
-#include "log.h"
 
 static int callback_read_one_item(void* para, int ncolumn, char** columnvalue, char* columnname[]);
 static int callback_count(void* para, int ncolumn, char** columnvalue, char* columnname[]);
