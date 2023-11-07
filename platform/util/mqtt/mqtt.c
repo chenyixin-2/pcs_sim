@@ -192,7 +192,7 @@ int mqtt_connect(void)
     // mqtt->conn_opts.username = mqtt->szusername;
     // mqtt->conn_opts.password = mqtt->szpasswd;
 
-    MQTTClient_setCallbacks(mqtt->cli, NULL, mqtt_connlost, NULL, NULL);
+    MQTTClient_setCallbacks(mqtt->cli, NULL, mqtt_connlost, mqtt_msgarrvd, NULL);
     if ((rc = MQTTClient_connect(mqtt->cli, &mqtt->conn_opts)) != MQTTCLIENT_SUCCESS)
     {
         log_dbg("%s, MQTTClient_connect fail, msg:%s", __func__, MQTTClient_strerror(rc));
